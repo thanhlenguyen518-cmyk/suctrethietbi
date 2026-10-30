@@ -1,0 +1,3 @@
+# Bootstrap; replaced by verified project ignore rules in the next commit.
+.env*
+node_modules/
