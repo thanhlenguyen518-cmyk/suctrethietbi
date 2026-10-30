@@ -21,13 +21,44 @@ Kiểm tra: `node --experimental-strip-types --test tests/*.test.ts`; `node node
 7. Người mượn báo đã bồi thường, phụ trách đối chiếu thực nhận. Khoản một phần giữ nợ; sau 7 ngày có thông báo để Ban chủ nhiệm xử lý.
 8. Xem Thông báo, Nhật ký; Thiết lập có trạng thái kết nối, hiệu chuẩn, lần chạy nền gần nhất.
 
+## Cấu trúc mã nguồn
+
+| Muốn xem | File / thư mục |
+|---|---|
+| Giao diện web | `app/page.tsx` |
+| Màu sắc, bố cục | `app/globals.css` |
+| Xử lý mượn–trả | `lib/workflow.ts` |
+| Kết nối và gọi AI | `lib/ai.ts` |
+| Kiểm tra kết quả AI | `lib/ai-schema.ts` |
+| Kiểm chứng ngưỡng tin cậy | `lib/calibration.ts` |
+| Tự động hóa quy trình | `lib/automation.ts` |
+| Xử lý nền và email | `lib/jobs.ts`, `lib/mail.ts` |
+| Kiểm soát xử lý đồng thời | `lib/locking.ts` |
+| API, lưu dữ liệu | `app/api/`, `lib/storage.ts` |
+| Xử lý ảnh biên bản | `app/api/photos/`, `lib/evidence.ts` |
+| Cấu trúc cơ sở dữ liệu | `db/schema.ts`, `drizzle/` |
+| Cấu hình Cloudflare | `worker/index.ts`, `vite.cloudflare.config.ts` |
+| Hướng dẫn triển khai | `docs/CLOUDFLARE.md` |
+| Kiểm thử | `tests/` |
+
 ## Mã nguồn để giải trình
 
-- `lib/workflow.ts`: trạng thái nghiệp vụ, kiểm tra luật, lịch tồn, bồi thường.
-- `lib/ai.ts`, `lib/ai-schema.ts`: API máy chủ, schema chặt, kiểm khớp dữ liệu nguồn, ảnh và bản nháp.
-- `lib/calibration.ts`: tiêu chí kiểm chứng ngưỡng 0,95 theo tập nhãn độc lập; không tạo kết quả kiểm thử giả.
-- `lib/automation.ts`: nối AI → luật → chuyển nhánh; nhắc quá hạn có mẫu dự phòng.
-- `lib/jobs.ts`, `lib/mail.ts`, `lib/locking.ts`: timer, hàng đợi email, kiểm trạng thái ngay trước khi gửi, chống trùng và khóa đồng thời.
-- `app/api/state`, `app/api/photos`, `app/api/maintenance`: danh tính, giới hạn dữ liệu, lưu ảnh riêng, endpoint xử lý nền.
-- `db/schema.ts`, `drizzle/`: migrations D1; không tạo bảng lúc xử lý request.
-- `tests/`: nghiệp vụ, cấu trúc AI, ngưỡng, timer, email adapter và SQLite tích hợp (mô phỏng D1). Test không gọi AI/email thật.
+- `lib/workflow.ts`: quản lý trạng thái đơn mượn, kiểm tra luật nghiệp vụ, số lượng thiết bị còn khả dụng theo lịch và xử lý bồi thường.
+- `lib/ai.ts`, `lib/ai-schema.ts`: gọi AI từ máy chủ, quy định cấu trúc kết quả và đối chiếu thông tin AI trả về với dữ liệu gốc.
+- `lib/calibration.ts`: đánh giá kết quả AI trên bộ dữ liệu có nhãn trước khi cho phép tự chuyển nhánh theo ngưỡng tin cậy 0,95.
+- `lib/automation.ts`: kết hợp AI với luật nghiệp vụ để xử lý đơn và tạo lời nhắc quá hạn; sử dụng mẫu dự phòng khi AI không hoạt động.
+- `lib/jobs.ts`, `lib/mail.ts`, `lib/locking.ts`: kiểm tra các mốc thời gian, quản lý hàng đợi email, kiểm tra trạng thái trước khi gửi và hạn chế xử lý trùng hoặc đồng thời.
+- `app/api/state/`, `lib/storage.ts`: tiếp nhận thao tác từ giao diện, kiểm tra dữ liệu và đọc/ghi cơ sở dữ liệu.
+- `app/api/photos/`, `lib/evidence.ts`: kiểm tra định dạng, dung lượng, lưu ảnh và cung cấp ảnh cho quá trình lập biên bản.
+- `app/api/maintenance/`: cung cấp endpoint chạy bộ xử lý nền. Endpoint này hiện bị khóa trên bản demo Cloudflare công khai.
+- `db/schema.ts`, `drizzle/`: khai báo bảng và lưu các phiên bản thay đổi cấu trúc cơ sở dữ liệu D1.
+- `worker/index.ts`, `vite.cloudflare.config.ts`: cấu hình triển khai Cloudflare độc lập và tạo phiên demo riêng cho từng trình duyệt, không yêu cầu đăng nhập ChatGPT.
+- `tests/`: kiểm thử nghiệp vụ, cấu trúc kết quả AI, ngưỡng tin cậy, các mốc thời gian, email và lưu dữ liệu trong môi trường mô phỏng. Các kiểm thử không gọi AI hoặc gửi email thật.
+
+## Phạm vi bản demo
+
+- Chuyển vai trò phục vụ mô phỏng nghiệp vụ, chưa phải cơ chế phân quyền tài khoản thực tế.
+- Mỗi trình duyệt có phiên dữ liệu demo riêng.
+- AI cần cấu hình khóa API và `AI_MODEL` phía máy chủ.
+- Email và kho ảnh cần được cấu hình riêng để sử dụng.
+- Bộ xử lý nền chưa được bật trên bản Cloudflare công khai.
