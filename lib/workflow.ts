@@ -1,6 +1,6 @@
 export type Role='borrower'|'staff'|'board';
 export type State={equipment:any[],requests:any[],logs:any[],notices:any[],settings:{highValue:number|null,autoCheck?:boolean,autoReminders?:boolean,emailEnabled?:boolean,calibration?:any[],lastJob?:any},version?:number};
-export const labels:Record<string,string>={review:'Chờ kiểm tra',supplement:'Cần bổ sung',board:'Chờ Ban chủ nhiệm',ready:'Đã giữ thiết bị',handover:'Chờ ký nhận',borrowed:'Đang mượn',incident:'Chờ duyệt biên bản',compensation:'Chờ duyệt bồi thường',payment:'Chờ bồi thường',payment_review:'Chờ đối chiếu bồi thường',debt_plan:'Chờ xử lý khoản còn thiếu',closed:'Hoàn tất',rejected:'Từ chối',unavailable:'Không đủ thiết bị',expired:'Hết hạn bổ sung'};
+export const labels:Record<string,string>={cancelled:'Đã hủy',review:'Chờ kiểm tra',supplement:'Cần bổ sung',board:'Chờ Ban chủ nhiệm',ready:'Đã giữ thiết bị',handover:'Chờ ký nhận',borrowed:'Đang mượn',incident:'Chờ duyệt biên bản',compensation:'Chờ duyệt bồi thường',payment:'Chờ bồi thường',payment_review:'Chờ đối chiếu bồi thường',debt_plan:'Chờ xử lý khoản còn thiếu',closed:'Hoàn tất',rejected:'Từ chối',unavailable:'Không đủ thiết bị',expired:'Hết hạn bổ sung'};
 export const emptyState=():State=>({equipment:[],requests:[],logs:[],notices:[],settings:{highValue:null}});
 const fail=(s:string):never=>{throw new Error(s)};
 const text=(x:any,max=3000)=>typeof x==='string'?x.trim().slice(0,max):'';
@@ -22,7 +22,7 @@ function reserve(s:State,r:any,now:number){if(r.items.some((i:any)=>available(s,
 export function route(s:State,r:any,now:number){if(r.items.some((i:any)=>available(s,i.id,r.start,r.end,r.id)<i.qty)){r.status='unavailable';notice(s,r,'Không đủ thiết bị theo lịch mượn.',now);return}
  const value=r.items.reduce((n:number,i:any)=>n+s.equipment.find(e=>e.id===i.id).value*i.qty,0);
  r.totalValue=value;
- if(s.settings.highValue===null || Date.parse(r.end)-Date.parse(r.start)>86400000 || value>=s.settings.highValue){r.status='board';r.boardAt=now;r.routingReason=s.settings.highValue===null?'Chưa cấu hình ngưỡng giá trị cao; chuyển Ban chủ nhiệm để kiểm tra.':'Giá trị cao hoặc thời gian mượn trên một ngày.'}else reserve(s,r,now);
+ if(s.settings.highValue===null || Date.parse(r.end)-Date.parse(r.start)>86400000 || value>=s.settings.highValue){r.status='board';r.boardAt=now;r.routingReason=s.settings.highValue===null?'Chờ Ban chủ nhiệm phê duyệt do CLB chưa quy định mức giá trị cần duyệt.':'Giá trị cao hoặc thời gian mượn trên một ngày.'}else reserve(s,r,now);
 }
 export function mutate(input:State,role:Role,action:string,p:any,now=Date.now()):State{
  const s=structuredClone(input);const r=s.requests.find(r=>r.id===p.id);
@@ -36,7 +36,25 @@ export function mutate(input:State,role:Role,action:string,p:any,now=Date.now())
   const data={name:text(p.name,120),contact:text(p.contact,180),purpose:text(p.purpose),start:new Date(p.start).toISOString(),end:new Date(p.end).toISOString(),items:p.items.map((i:any)=>({id:i.id,qty:i.qty})),status:'review',updatedAt:now};
   if(action==='create'){const n={...data,id:'MT-'+crypto.randomUUID().slice(0,8).toUpperCase(),createdAt:now};s.requests.unshift(n);log(s,role,n.id,'Gửi đơn mượn trực tuyến',now)}else{Object.assign(r,data);delete r.ai;log(s,role,r.id,'Bổ sung và gửi lại đơn',now)}return s;
  }
- if(action==='review'){need(['staff'],['review']);if(p.valid===false){if(!text(p.note))fail('Nhập thông tin cần bổ sung.');r.status='supplement';r.note=text(p.note);r.supplementUntil=now+86400000;notice(s,r,r.note+' — vui lòng bổ sung trong 24 giờ.',now)}else{if(!text(p.note))fail('Nhập căn cứ kiểm tra thủ công.');r.reviewNote=text(p.note);route(s,r,now)}}
+ if(action==='cancel'){
+  need(['borrower']);if(!r)fail('Không tìm thấy đơn mượn.');
+  if(r.signedAt||!['review','supplement','board','ready','handover'].includes(r.status)){
+   notice(s,r,'Không thể hủy: '+(r.signedAt?'đã ký nhận thiết bị. Vui lòng thực hiện quy trình trả thiết bị.':'đơn không còn ở trạng thái được hủy.'),now);
+   log(s,role,r.id,'Từ chối yêu cầu hủy; giữ nguyên quy trình đang xử lý',now);return s;
+  }
+  if(p.confirmed!==true)fail('Cần xác nhận hủy đơn.');
+  r.status='cancelled';r.cancelledAt=now;r.cancelReason='Người mượn yêu cầu hủy trước khi ký nhận';
+  notice(s,r,'Đơn đã hủy theo yêu cầu. Lịch giữ thiết bị đã được giải phóng.',now);
+  for(const to of ['staff','board'])s.notices.unshift({id:crypto.randomUUID(),requestId:r.id,to,body:'Người mượn '+r.name+' đã hủy đơn '+r.id+'. Lịch giữ thiết bị đã được giải phóng.',at:new Date(now).toISOString(),channel:'in-app'});
+  log(s,role,r.id,'Người mượn hủy đơn; giải phóng lịch giữ thiết bị',now);return s;
+ }
+ if(action==='noSuitableEquipment'){
+  need(['staff'],['ready']);if(p.checked!==true||p.confirmed!==true)fail('Cần xác nhận đã kiểm tra và không có thiết bị đạt để giao.');
+  r.status='cancelled';r.cancelledAt=now;r.cancelReason='Không có thiết bị đạt yêu cầu trước khi giao';
+  notice(s,r,'Đơn bị hủy vì không có thiết bị đạt yêu cầu để giao. Lịch giữ thiết bị đã được giải phóng.',now);
+  log(s,role,r.id,'Hủy đơn do kiểm tra trước giao không có thiết bị đạt; giải phóng lịch giữ',now);return s;
+ }
+ if(action==='review'){need(['staff'],['review']);if(p.valid===false){if(!text(p.note))fail('Nhập thông tin cần bổ sung.');r.status='supplement';r.note=text(p.note);r.supplementUntil=now+86400000;notice(s,r,r.note+' — vui lòng bổ sung trong 24 giờ.',now)}else{r.reviewNote='Đã kiểm tra và xác nhận thông tin hợp lệ.';route(s,r,now)}}
  else if(action==='approve'){need(['board'],['board']);if(!text(p.note))fail('Nhập căn cứ hoặc lý do quyết định.');r.boardNote=text(p.note);if(p.approved===true)reserve(s,r,now);else{r.status='rejected';notice(s,r,'Đơn bị từ chối: '+r.boardNote,now)}}
  else if(action==='handover'){need(['staff'],['ready']);if(Date.parse(r.end)<=now)fail('Lịch mượn đã kết thúc. Cần tạo lịch mới.');if(!text(p.note)||p.checked!==true)fail('Xác nhận kiểm tra thiết bị và ghi tình trạng, phụ kiện trước giao.');r.handoverNote=text(p.note);r.status='handover'}
  else if(action==='sign'){need(['borrower'],['handover']);if(p.confirmed!==true)fail('Cần xác nhận đã nhận đúng thiết bị và phụ kiện.');r.signature=r.name;r.signedAt=now;r.status='borrowed'}
