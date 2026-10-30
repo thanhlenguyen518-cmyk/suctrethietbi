@@ -52,13 +52,17 @@ Kiểm tra: `node --experimental-strip-types --test tests/*.test.ts`; `node node
 - `app/api/photos/`, `lib/evidence.ts`: kiểm tra định dạng, dung lượng, lưu ảnh và cung cấp ảnh cho quá trình lập biên bản.
 - `app/api/maintenance/`: cung cấp endpoint chạy bộ xử lý nền. Endpoint này hiện bị khóa trên bản demo Cloudflare công khai.
 - `db/schema.ts`, `drizzle/`: khai báo bảng và lưu các phiên bản thay đổi cấu trúc cơ sở dữ liệu D1.
-- `worker/index.ts`, `vite.cloudflare.config.ts`: cấu hình triển khai Cloudflare độc lập và tạo phiên demo riêng cho từng trình duyệt, không yêu cầu đăng nhập ChatGPT.
+- `worker/index.ts`, `vite.cloudflare.config.ts`: cấu hình triển khai Cloudflare độc lập, dùng tài khoản email/mật khẩu và không yêu cầu đăng nhập ChatGPT.
 - `tests/`: kiểm thử nghiệp vụ, cấu trúc kết quả AI, ngưỡng tin cậy, các mốc thời gian, email và lưu dữ liệu trong môi trường mô phỏng. Các kiểm thử không gọi AI hoặc gửi email thật.
 
 ## Phạm vi bản demo
 
-- Chuyển vai trò phục vụ mô phỏng nghiệp vụ, chưa phải cơ chế phân quyền tài khoản thực tế.
-- Mỗi trình duyệt có phiên dữ liệu demo riêng.
+- Mỗi email có một tài khoản với một vai trò cố định; máy chủ kiểm tra quyền trên từng thao tác.
+- Các tài khoản dùng chung dữ liệu CLB; người mượn chỉ xem và thao tác đơn của mình.
 - AI cần cấu hình khóa API và `AI_MODEL` phía máy chủ.
 - Email và kho ảnh cần được cấu hình riêng để sử dụng.
 - Bộ xử lý nền chưa được bật trên bản Cloudflare công khai.
+
+## Tài khoản và quyền truy cập
+
+Đăng ký Người mượn không cần mã. Đăng ký Phụ trách thiết bị hoặc Ban chủ nhiệm yêu cầu mã do chủ website cấp; cấu hình hai Secret `STAFF_ACCESS_CODE` và `BOARD_ACCESS_CODE` trong Cloudflare. Không công khai mã trên GitHub. Hướng dẫn demo chuyển vai trò ở trên chỉ áp dụng bản cũ; với bản này phải đăng xuất và đăng nhập tài khoản đúng vai trò. Xem `docs/CLOUDFLARE.md`.
