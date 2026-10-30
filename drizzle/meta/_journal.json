@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1793274458098,
+      "tag": "0000_nebulous_landau",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1793320326999,
+      "tag": "0001_outgoing_the_fallen",
+      "breakpoints": true
+    }
+  ]
+}

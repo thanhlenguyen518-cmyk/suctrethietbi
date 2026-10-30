@@ -1,0 +1,4 @@
+[
+ {"caseId":"example-valid-01","expectedValid":true,"purpose":"Mượn một micro không dây để dẫn chương trình sinh hoạt CLB tại phòng B201, có hệ thống loa tương thích.","start":"2030-01-01T01:00:00Z","end":"2030-01-01T03:00:00Z","items":[{"id":"TB002","name":"Micro không dây","qty":1}]},
+ {"caseId":"example-invalid-01","expectedValid":false,"purpose":"Tôi cần duy nhất máy chiếu để chiếu slide trong hội trường, không dùng thiết bị âm thanh.","start":"2030-01-01T01:00:00Z","end":"2030-01-01T03:00:00Z","items":[{"id":"TB002","name":"Micro không dây","qty":1}]}
+]

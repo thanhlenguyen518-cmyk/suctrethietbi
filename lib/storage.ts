@@ -1,0 +1,6 @@
+import {emptyState} from './workflow.ts';
+export const json=(d:any,status=200)=>Response.json(d,{status,headers:{'Cache-Control':'no-store'}});
+export function sameOrigin(req:Request){if(req.headers.get('origin')!==new URL(req.url).origin)throw new Error('Nguồn yêu cầu không hợp lệ.');}
+export async function loadWorkspace(env:any,req:Request){const owner=req.headers.get('oai-authenticated-user-id');if(!owner)throw new Error('AUTH');return loadOwner(env,owner)}
+export async function loadOwner(env:any,owner:string){const db=env.DB;if(!db)throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');let row=await db.prepare('SELECT data,version FROM workspaces WHERE id=?').bind(owner).first();if(!row){await db.prepare('INSERT OR IGNORE INTO workspaces(id,version,data) VALUES(?,0,?)').bind(owner,JSON.stringify(emptyState())).run();row=await db.prepare('SELECT data,version FROM workspaces WHERE id=?').bind(owner).first()}return {owner,db,s:JSON.parse(row.data),version:row.version};}
+export async function saveWorkspace(db:any,owner:string,version:number,state:any){const r=await db.prepare('UPDATE workspaces SET data=?,version=version+1 WHERE id=? AND version=?').bind(JSON.stringify(state),owner,version).run();if(!r.meta.changes)throw new Error('Dữ liệu vừa thay đổi. Tải lại và thực hiện lại để tránh xử lý trùng.');}
