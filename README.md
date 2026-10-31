@@ -1,6 +1,6 @@
 # Sức Trẻ — Quản lý mượn trả thiết bị
 
-Web học phần MIS3047, Nhóm 1. React, TypeScript, Vinext, Cloudflare Workers, D1, R2. Giao diện tiếng Việt; không gian riêng đăng nhập ChatGPT, chuyển ba vai trò để diễn tập. Chưa phải phân quyền ba tài khoản CLB độc lập.
+Web học phần MIS3047, Nhóm 1. React, TypeScript, Vinext, Cloudflare Workers, D1, R2. Giao diện tiếng Việt; chuyển ba vai trò để diễn tập. Chưa phải phân quyền ba tài khoản CLB độc lập.
 
 ## Chạy
 
@@ -9,8 +9,6 @@ Node >=22.13; cài dependencies theo pnpm-lock.yaml. `npm run dev`, `npm run bui
 Kiểm tra: `node --experimental-strip-types --test tests/*.test.ts`; `node node_modules/typescript/bin/tsc --noEmit`.
 
 ## Kết nối và demo
-
-Đọc [docs/CONNECT_AI.md](docs/CONNECT_AI.md) để cấu hình, kiểm tra AI thật, hiệu chuẩn ngưỡng và bật email. Không lưu khóa trong Git hoặc nhập vào biểu mẫu. Lịch chạy nền và cơ chế truy cập ở [docs/AUTOMATION.md](docs/AUTOMATION.md).
 
 1. Phụ trách: thêm thiết bị thật hoặc nạp danh mục demo có ghi rõ giả lập.
 2. Người mượn: tạo đơn với lịch tương lai, mục đích, thiết bị và số lượng.
