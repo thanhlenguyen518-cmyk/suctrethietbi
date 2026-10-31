@@ -1,3 +1,4 @@
+import {authenticatedAccount} from '../../../lib/accounts';
 import {env} from 'cloudflare:workers';
 import {mutate} from '../../../lib/workflow';
 import {runAI,aiConfig,aiFingerprint} from '../../../lib/ai';
@@ -15,6 +16,7 @@ export async function GET(req:Request){try{const {s,version}=await loadWorkspace
 export async function POST(req:Request){try{
  sameOrigin(req);if(Number(req.headers.get('content-length')||0)>200000)throw new Error('Dữ liệu quá lớn.');const b:any=await req.json();if(JSON.stringify(b).length>200000)throw new Error('Dữ liệu quá lớn.');if(!['borrower','staff','board'].includes(b.role))throw new Error('Vai trò không hợp lệ.');const assigned=req.headers.get('x-suctre-role');if(assigned&&b.role!==assigned)return json({error:'Bạn không có quyền sử dụng vai trò này.'},403);const initial=await loadWorkspace(env,req);
  return await withLock(initial.db,initial.owner,async()=>{
+ if(req.headers.get('x-suctre-account')&&!await authenticatedAccount(env,req))return json({error:'Phiên đăng nhập đã kết thúc.'},401);
  const {owner,db,s,version}=await loadOwner(env,initial.owner);if(b.version!==version)return json({error:'Dữ liệu đã thay đổi. Tải lại trước khi thực hiện.'},409);const previousLogs=[...s.logs];let next:any=s;const p=b.payload||{};const account=req.headers.get('x-suctre-account');if(assigned==='borrower'){if(p.id&&!s.requests.some((r:any)=>r.id===p.id&&r.accountEmail===account))return json({error:'Bạn không có quyền thao tác hồ sơ này.'},403);if(['create','resubmit'].includes(b.action)){p.name=decodeURIComponent(req.headers.get('x-suctre-name')||'');p.contact=account;}}
  if(b.action==='ai'){
   if(b.role!=='staff')throw new Error('Chỉ phụ trách thiết bị được thực hiện.');const r=s.requests.find((r:any)=>r.id===p.id);if(!r)throw new Error('Không tìm thấy hồ sơ.');const kind=p.kind;
