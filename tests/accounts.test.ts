@@ -40,3 +40,53 @@ test('session write failure rolls back registration and the same email can regis
  const duplicate=await accountEndpoint(env,request(fields));assert.equal(duplicate.status,409);assert.equal((await duplicate.json() as any).code,'ACCOUNT_EXISTS');
  const loggedIn=await accountEndpoint(env,request({...fields,action:'login'}));assert.equal(loggedIn.status,200);
 });
+
+// SQLite exercises the same JSON queries and transactional deletion used by D1.
+import {DatabaseSync} from 'node:sqlite';
+function sqliteDatabase(){
+ const sql=new DatabaseSync(':memory:');sql.exec('CREATE TABLE workspaces(id TEXT PRIMARY KEY,version INTEGER NOT NULL DEFAULT 0,data TEXT NOT NULL); CREATE TABLE job_locks(id TEXT PRIMARY KEY,token TEXT,until INTEGER);');
+ const db={sql,prepare(query:string){let values:any[]=[];return {bind(...args:any[]){values=args;return this},async first(){return sql.prepare(query).get(...values)||null},async run(){return {meta:{changes:Number(sql.prepare(query).run(...values).changes)}}}}},async batch(items:any[]){sql.exec('BEGIN');try{const out=[];for(const item of items)out.push(await item.run());sql.exec('COMMIT');return out}catch(e){sql.exec('ROLLBACK');throw e}}};return db;
+}
+test('self deletion requires session, matching confirmation and password; blocks active loans and outstanding debt',async()=>{
+ const DB=sqliteDatabase(),env={DB},email='owner@example.com',password='test-password-only';
+ const registered=await accountEndpoint(env,request({action:'register',email,password,name:'Owner'}));const cookie=registered.headers.get('set-cookie')!.split(';')[0];
+ const body={action:'deleteAccount',email,password,confirmation:'XÓA TÀI KHOẢN'};
+ assert.equal((await accountEndpoint(env,request(body))).status,401);
+ assert.equal((await accountEndpoint(env,request({...body,email:'other@example.com'},cookie))).status,400);
+ assert.equal((await accountEndpoint(env,request({...body,confirmation:''},cookie))).status,400);
+ assert.equal((await accountEndpoint(env,request({...body,password:'wrong'},cookie))).status,403);
+ for(const loan of [{status:'borrowed'},{status:'review'},{status:'closed',amount:100,paid:20},{status:'closed',remainingDebt:80}]){
+ DB.sql.prepare('INSERT OR REPLACE INTO workspaces VALUES(?,0,?)').run('club:suctre',JSON.stringify({requests:[{accountEmail:email,...loan}],logs:[]}));
+ assert.equal((await accountEndpoint(env,request(body,cookie))).status,409);
+ assert.ok(await authenticatedAccount(env,new Request('https://club.example',{headers:{cookie}})));
+ }
+ DB.sql.close();
+});
+test('deletion removes credentials, every session and reset token, preserves others and detaches historical ownership',async()=>{
+ const DB=sqliteDatabase(),env={DB},email='owner@example.com',password='test-password-only';
+ const fields={email,password,name:'Owner'};
+ const registered=await accountEndpoint(env,request({...fields,action:'register'}));const cookie=registered.headers.get('set-cookie')!.split(';')[0];
+ const second=await accountEndpoint(env,request({...fields,action:'login'}));const secondCookie=second.headers.get('set-cookie')!.split(';')[0];
+ await accountEndpoint(env,request({...fields,email:'other@example.com',action:'register'}));
+ DB.sql.prepare('INSERT INTO workspaces VALUES(?,0,?)').run('reset:test',JSON.stringify({email}));
+ DB.sql.prepare('INSERT INTO workspaces VALUES(?,0,?)').run('club:suctre',JSON.stringify({requests:[{id:'DONE',accountEmail:email,status:'closed',amount:20,paid:20}],logs:[{actorEmail:email,action:'Historical action'}],equipment:[{id:'TB1'}]}));
+ const result=await accountEndpoint(env,request({action:'deleteAccount',email,password,confirmation:'XÓA TÀI KHOẢN'},cookie));assert.equal(result.status,200);assert.match(result.headers.get('set-cookie')!,/Max-Age=0/);
+ assert.equal(DB.sql.prepare('SELECT * FROM workspaces WHERE id=?').get('account:'+email),undefined);
+ assert.equal(DB.sql.prepare('SELECT * FROM workspaces WHERE id=?').get('reset:test'),undefined);
+ const state=JSON.parse((DB.sql.prepare('SELECT data FROM workspaces WHERE id=?').get('club:suctre') as any).data);assert.equal(state.requests[0].id,'DONE');assert.match(state.requests[0].accountEmail,/^deleted:/);assert.equal(state.logs[0].actorEmail,state.requests[0].accountEmail);assert.equal(state.equipment.length,1);
+ assert.ok(DB.sql.prepare('SELECT * FROM workspaces WHERE id=?').get('account:other@example.com'));
+ assert.equal(await authenticatedAccount(env,new Request('https://club.example',{headers:{cookie:secondCookie}})),null);
+ assert.equal((await accountEndpoint(env,request({...fields,action:'register'}))).status,200);
+ assert.equal(await authenticatedAccount(env,new Request('https://club.example',{headers:{cookie}})),null);
+ DB.sql.close();
+});
+test('Google-only account deletion requires a recent session and works without a local password',async()=>{
+ const DB=sqliteDatabase(),env={DB},email='google@example.com';
+ const response=await accountEndpoint(env,request({action:'register',email,password:'test-password-only',name:'Google'}));const cookie=response.headers.get('set-cookie')!.split(';')[0];
+ DB.sql.prepare("UPDATE workspaces SET data=json_set(data,'$.hash','google-only') WHERE id=?").run('account:'+email);
+ DB.sql.prepare("UPDATE workspaces SET data=json_set(data,'$.issuedAt',?) WHERE id LIKE 'session:%'").run(Date.now()-600000);
+ const body={action:'deleteAccount',email,confirmation:'XÓA TÀI KHOẢN'};
+ assert.equal((await accountEndpoint(env,request(body,cookie))).status,403);
+ DB.sql.prepare("UPDATE workspaces SET data=json_set(data,'$.issuedAt',?) WHERE id LIKE 'session:%'").run(Date.now());
+ assert.equal((await accountEndpoint(env,request(body,cookie))).status,200);DB.sql.close();
+});
