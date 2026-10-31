@@ -1,6 +1,7 @@
 'use client';
 import {useEffect,useState} from 'react';
 import AccountLogin from '../components/account-login';
+import PasswordReset from '../components/password-reset';
 import {LayoutDashboard,Package,ClipboardList,CalendarDays,ShieldCheck,Bell,Settings,Plus,ArrowUpRight,ArrowRight,Search,ChevronRight,Box,Speaker,Mic,Camera,Projector,Check,Clock,FileText,Download,RefreshCw,X,Activity,LogOut,TriangleAlert} from 'lucide-react';
 import {reportText} from '../lib/ai-schema';
 import {labels,available} from '../lib/workflow';
@@ -11,6 +12,7 @@ const localInput=(offset:number)=>{const d=new Date(Date.now()+offset);return ne
 const icons:any={speaker:Speaker,mic:Mic,camera:Camera,projector:Projector};
 function Badge({status}:{status:string}){return <span className={'badge '+status}>{labels[status]||status}</span>}
 export default function Page(){
+ const [resetToken,setResetToken]=useState<string|null>(null);useEffect(()=>{const token=new URLSearchParams(window.location.hash.slice(1)).get('reset');if(token){setResetToken(token);history.replaceState(null,'',window.location.pathname+window.location.search)}},[]);
  const [user,setUser]=useState<any>(undefined);
  const [data,setData]=useState<any>(null),[error,setError]=useState(''),[busy,setBusy]=useState(false),[role,setRole]=useState('staff'),[tab,setTab]=useState('Tổng quan'),[search,setSearch]=useState(''),[filter,setFilter]=useState(''),[modal,setModal]=useState(''),[selected,setSelected]=useState<any>(null),[toast,setToast]=useState(''),[note,setNote]=useState(''),[checked,setChecked]=useState(false),[amount,setAmount]=useState(''),[damage,setDamage]=useState<any>({}),[editing,setEditing]=useState<any>(null),[signer,setSigner]=useState(''),[calibrationFile,setCalibrationFile]=useState<any[]>([]),[calibrationProgress,setCalibrationProgress]=useState('');
  const [form,setForm]=useState<any>({name:'',contact:'',purpose:'',start:localInput(3600000),end:localInput(5*3600000),items:{}});
@@ -31,6 +33,7 @@ export default function Page(){
  function exportData(){const b=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='suc-tre-du-lieu.json';a.click();URL.revokeObjectURL(a.href)}
  const initials=String(user?.name||'').trim().split(/\s+/u).filter(Boolean).slice(-2).map(part=>Array.from(part)[0]).join('').toLocaleUpperCase('vi-VN')||'?';
  const nav=[['Tổng quan',LayoutDashboard],['Thiết bị',Package],['Đơn mượn',ClipboardList],['Lịch mượn',CalendarDays],['Phê duyệt',ShieldCheck],['Thông báo',Bell],['Nhật ký',Activity],['Thiết lập',Settings]] as const;
+ if(resetToken!==null)return <PasswordReset token={resetToken} onBack={()=>{setResetToken(null);setUser(null);setData(null)}}/>;
  if(user===undefined)return <div className="panel empty">Đang kiểm tra đăng nhập…</div>;
  if(!user)return <AccountLogin onLogin={login}/>;
  return <div className="shell"><aside><a className="brand" href="/"><span className="logo"><Box size={23}/></span><span>SỨC TRẺ<small>QUẢN LÝ THIẾT BỊ</small></span></a><div className="workspace"><span className="mini-logo">ST</span><div>CLB Sức Trẻ<small>Đại học Kinh tế · ĐHĐN</small></div></div><div className="nav-label">CHỨC NĂNG</div><nav>{nav.filter(([name])=>name!=='Thiết lập'||role==='board').filter(([name])=>name!=='Phê duyệt'||role==='board').map(([name,Icon])=><button key={name} className={tab===name?'active':''} onClick={()=>{setTab(name);setFilter('');setSearch('')}}><Icon size={18}/>{name}{name==='Phê duyệt'&&requests.some((r:any)=>r.status==='board')&&<i>{requests.filter((r:any)=>r.status==='board').length}</i>}</button>)}</nav><div className="profile"><span className="avatar" title={user.name}>{initials}</span><div>{user.name}<small>{roles[role]}</small></div></div></aside>
