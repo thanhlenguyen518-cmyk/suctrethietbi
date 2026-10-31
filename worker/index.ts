@@ -1,3 +1,4 @@
+import {googleAuth} from '../lib/google-auth';
 import {accountEndpoint,authenticatedAccount} from "../lib/accounts";
 import handler from "vinext/server/fetch-handler";
 import { runWithConnectorBinding } from "../lib/connector-context";
@@ -7,6 +8,7 @@ const worker = {
   async fetch(request: Request, env: Cloudflare.Env, ctx: ExecutionContext<{ CONNECTORS?: ConnectorBinding }>) {
     if ((env as any).PUBLIC_DEMO === "true") {
       const url = new URL(request.url);
+      if (['/api/auth/google','/api/auth/google/callback'].includes(url.pathname)) return googleAuth(env,request);
       if (url.pathname === "/api/auth") return accountEndpoint(env,request);
       if (url.pathname === "/api/maintenance") return Response.json({error:"Bộ xử lý nền chưa bật trên hosting này."},{status:403});
       const headers = new Headers(request.headers);
