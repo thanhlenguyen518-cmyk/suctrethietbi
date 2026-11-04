@@ -465,3 +465,107 @@ footer{color:var(--text-soft)}
  .equipment-card{transition:none}
  .equipment-card:hover{transform:none}
 }
+
+
+/* SỨC TRẺ: muted chocolate / powder blue / soft butter
+   Brown leads the identity, blue supports navigation and information,
+   yellow is restricted to quiet details rather than large bright surfaces. */
+:root{
+ --brown:#472F26;
+ --azure:#BBD3E0;
+ --yellow:#F8EFD2;
+ --butter:#F5E5B6;
+ --canvas:#FBF9F4;
+ --paper:#FFFEFA;
+ --text-soft:#715A51;
+ --line-warm:#E6DCD1;
+ --ink:var(--brown);
+ --muted:var(--text-soft);
+ --green:var(--brown);
+ --line:var(--line-warm);
+ --accent-soft:var(--yellow);
+}
+html{background:var(--canvas)}
+body{
+ background:
+  radial-gradient(circle at 94% 180px,rgba(187,211,224,.22) 0 84px,transparent 85px),
+  radial-gradient(circle at 6% 640px,rgba(248,239,210,.27) 0 96px,transparent 97px),
+  var(--canvas);
+ color:var(--brown);
+}
+aside{
+ background:var(--brown);
+ border-right:1px solid #38231D;
+ box-shadow:4px 0 16px #3b261b0e;
+}
+aside .brand{
+ display:flex;align-items:center;gap:12px;
+ padding:0 8px;min-height:54px;
+ color:var(--paper);font-size:22px;
+ white-space:nowrap;line-height:1;
+}
+.brand-copy{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:5px;line-height:1.04;min-width:0}
+aside .brand small{
+ color:#EEE2D5;font-family:'Be Vietnam Pro',Arial,sans-serif;
+ font-size:9px;letter-spacing:.65px;line-height:1.25;margin:0;font-weight:600;
+}
+aside .logo{
+ display:grid;place-items:center;
+ position:relative;flex:0 0 44px;width:44px;height:44px;
+ background:var(--azure);color:var(--brown);
+ border-radius:13px;box-shadow:none;
+ transform:none;vertical-align:middle;
+}
+aside .logo svg{display:block;stroke-width:2.1;transform:none}
+aside .logo:after{right:-4px;top:-5px;width:7px;height:7px;background:var(--butter)}
+aside .nav-label{color:#E4CEBD}
+aside nav button{color:#F5EDE7;border-color:transparent;font-weight:650}
+aside nav button svg{color:inherit}
+aside nav button:hover{background:#684A3D;border-color:#876555;color:#fff}
+aside nav button.active{
+ background:var(--azure);color:var(--brown);border:1px solid #8CAEBE;
+ box-shadow:inset 4px 0 0 var(--butter);
+}
+aside nav i{background:#F1E5CA;color:var(--brown)}
+aside .profile{border-color:#85675B;color:#fff}
+aside .profile small{color:#E6D6CA}
+aside .avatar{background:var(--azure);color:var(--brown)}
+header{background:var(--paper);border-bottom:1px solid var(--line-warm)}
+.overview-bar{
+ background:linear-gradient(110deg,#BBD3E0,#D6E6ED);
+ border:1px solid #A9C3D0;
+}
+.overview-bar:before{border-color:rgba(248,239,210,.72)}
+.overview-bar:after{color:rgba(255,255,255,.37)}
+.stat:before{background:#EEE0C4;opacity:.48}
+.stat:nth-child(2):before{background:var(--azure)}
+.stat:nth-child(3):before{background:#E8DBD4}
+.stat:nth-child(4):before{background:#D5E0E6}
+.panel,.stat,.equipment-card,.setting{background:var(--paper);border-color:var(--line-warm)}
+.page-heading h1:after{background:var(--yellow);height:5px}
+.iconbtn{background:var(--azure);border-color:#A9C6D3}
+.notice-icon{background:#D8E8EF;color:var(--brown)}
+.equipment-visual.mic{background:radial-gradient(circle at 78% 19%,#BBD3E0 0 26px,transparent 27px),#F8EFD2}
+.equipment-visual.camera{background:radial-gradient(circle at 85% 22%,#F8EFD2 0 26px,transparent 27px),#D9E6EC}
+.onboard{background:#F8F0DB;border-color:#DED0AA}
+th{background:#F3EFE7;border-bottom-color:#E4DBD0}
+tbody tr:hover{background:#F5F7F6}
+.callout,.email-verify{background:#F8F2E2;border-color:#E6DAC0}
+.badge.review,.badge.board,.badge.supplement,.badge.payment,.badge.compensation{
+ background:#F5EBD2;color:#684B2B;border-color:#E5D3AA;
+}
+.account-dropdown button:hover{background:#F8F0DD}
+.primary{background:var(--brown);color:#FFFDF8;border-color:var(--brown);box-shadow:2px 3px 0 #C3B3A9}
+.secondary{background:var(--azure);color:var(--brown);border-color:#9FBDC9}
+.secondary:hover{background:#D0E3EB}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{
+ outline:3px solid #90B2C4!important;outline-offset:2px
+}
+@media(max-width:760px){
+ aside{background:var(--brown);border-right:0;border-bottom:1px solid #38231D}
+ aside .brand{font-size:19px;min-height:48px}
+ aside .brand small{font-size:8px}
+ aside .logo{flex-basis:40px;width:40px;height:40px}
+ aside nav button{color:#F5EDE7}
+ aside nav button.active{color:var(--brown)}
+}
