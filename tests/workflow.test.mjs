@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {mutate, available} from '../lib/workflow.ts';
+import {borrowedQuantity,visibleNotices} from '../lib/visibility.ts';
 
 const now=Date.parse('2026-11-05T08:00:00.000Z');
 const start=new Date(now+60*60*1000).toISOString();
@@ -46,4 +47,24 @@ test('Creation preserves idempotency token',()=>{
  const s=state();s.requests=[];
  const out=mutate(s,'borrower','create',{submissionId:'11111111-1111-4111-8111-111111111111',name:'A',contact:'a@example.com',purpose:'Họp CLB',start,end,items:[{...item}]},now);
  assert.equal(out.requests[0].submissionId,'11111111-1111-4111-8111-111111111111');
+});
+
+test('Global borrowed count covers requests from every account',()=>{
+ const a={status:'borrowed',items:[{id:'A',qty:2}],accountEmail:'a@example.com'};
+ const b={status:'borrowed',items:[{id:'B',qty:3}],accountEmail:'b@example.com'};
+ assert.equal(borrowedQuantity([a,b,{status:'closed',items:[{id:'C',qty:9}]}]),5);
+});
+test('Borrowers only see notices addressed to them for their own requests',()=>{
+ const notices=[{requestId:'A',to:'a@example.com'},{requestId:'A',to:'b@example.com'},{requestId:'B',to:'a@example.com'},{requestId:'A',to:'staff'}];
+ const out=visibleNotices(notices,'borrower','a@example.com',new Set(['A']));
+ assert.equal(out.length,1);assert.equal(out[0].to,'a@example.com');
+});
+test('Board members cannot read unrelated staff or borrower notifications',()=>{
+ const notices=[{requestId:'A',to:'board'},{requestId:'B',to:'staff'},{requestId:'B',to:'a@example.com'},{requestId:'C',to:'Ban chủ nhiệm'}];
+ assert.equal(visibleNotices(notices,'board','board@example.com').length,2);
+});
+test('Outstanding repayment can be reported without closing debt early',()=>{
+ const s=state('debt_plan');s.requests[0].amount=100000;s.requests[0].paid=20000;
+ const out=mutate(s,'borrower','reportPayment',{id:'MT-001',note:'Chuyển khoản đợt hai'},now);
+ assert.equal(out.requests[0].status,'payment_review');
 });
