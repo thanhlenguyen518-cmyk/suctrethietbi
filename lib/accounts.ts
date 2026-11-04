@@ -1,4 +1,3 @@
-import {withLock} from './locking.ts';
 import {resetPassword} from './password-reset.ts';
 export type Account={email:string;name:string;role:'borrower'|'staff'|'board';salt:string;hash:string};
 export const digest=async(s:string)=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)))).map(x=>x.toString(16).padStart(2,'0')).join('');
@@ -12,7 +11,6 @@ export async function accountEndpoint(env:any,req:Request){const reply=(data:any
  if(req.headers.get('origin')!==new URL(req.url).origin)return reply({error:'Nguồn yêu cầu không hợp lệ.'},403);
  const raw=await req.text();if(raw.length>4096)return reply({error:'Dữ liệu quá lớn.'},413);let b:any;try{b=JSON.parse(raw)}catch{return reply({error:'Dữ liệu tài khoản không hợp lệ.'},400)}
  if(['forgotPassword','resetPassword'].includes(b.action))return resetPassword(env,req,b);
- if(b.action==='deleteAccount')return deleteOwnAccount(env,req,b);
  if(b.action==='logout'){const token=req.headers.get('cookie')?.match(/(?:^|;\s*)suctre_session=([a-f0-9-]{72})(?:;|$)/)?.[1];if(token)await env.DB.prepare('DELETE FROM workspaces WHERE id=?').bind('session:'+await digest(token)).run();return reply({ok:true},200,'suctre_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0')}
  if(!['register','login'].includes(b.action))return reply({error:'Thao tác không hợp lệ.'},400);
  const email=typeof b.email==='string'?b.email.trim().toLowerCase():'',password=typeof b.password==='string'?b.password:'';
@@ -37,31 +35,3 @@ export async function accountEndpoint(env:any,req:Request){const reply=(data:any
  return reply({ok:true,user:{email:a.email,name:a.name,role:a.role}},200,`suctre_session=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=86400`);
  }catch{return reply({error:'Không thể xử lý tài khoản. Vui lòng thử lại.'},503)}}
 
-// The target identity always comes from the authenticated session, never the form.
-async function deleteOwnAccount(env:any,req:Request,b:any){
- const reply=(x:any,status=200)=>Response.json(x,{status,headers:{'Cache-Control':'no-store'}});
- return withLock(env.DB,'club:suctre',async()=>{
-  const account=await authenticatedAccount(env,req);
-  if(!account)return reply({error:'Vui lòng đăng nhập lại.'},401);
-  if(b.confirmation!=='XÓA TÀI KHOẢN'||String(b.email||'').trim().toLowerCase()!==account.email)return reply({error:'Nhập đúng email và dòng XÓA TÀI KHOẢN để xác nhận.'},400);
-  if(account.hash==='google-only'){
-   const token=req.headers.get('cookie')?.match(/(?:^|;\s*)suctre_session=([a-f0-9-]{72})(?:;|$)/)?.[1];
-   const session=await read(env.DB,'session:'+await digest(token!));
-   if(!session?.issuedAt||Date.now()-session.issuedAt>300000)return reply({error:'Hãy đăng xuất và đăng nhập lại bằng Google, rồi xóa tài khoản trong vòng 5 phút.'},403);
-  }else if(typeof b.password!=='string'||b.password.length>128||await passwordHash(b.password,account.salt)!==account.hash)return reply({error:'Mật khẩu hiện tại không đúng.'},403);
-  const row=await env.DB.prepare('SELECT data,version FROM workspaces WHERE id=?').bind('club:suctre').first();
-  const state=row?JSON.parse(row.data):null;
-  const owned=(state?.requests||[]).filter((r:any)=>r.accountEmail===account.email);
-  if(owned.some((r:any)=>!['closed','cancelled','rejected','unavailable','expired'].includes(r.status)||Number(r.remainingDebt||0)>0||Number(r.amount||0)>Number(r.paid||0)))return reply({error:'Chưa thể xóa: còn đơn mượn chưa kết thúc hoặc khoản bồi thường chưa thanh toán. Hãy hoàn tất hoặc hủy đơn được phép hủy trước.'},409);
-  const archived='deleted:'+crypto.randomUUID(),writes=[];
-  // Preserve club audit records but detach ownership so re-registration cannot inherit them.
-  if(state){for(const r of state.requests||[])if(r.accountEmail===account.email)r.accountEmail=archived;
-   for(const l of state.logs||[])if(l.actorEmail===account.email)l.actorEmail=archived;
-   writes.push(env.DB.prepare('UPDATE workspaces SET data=?,version=version+1 WHERE id=?').bind(JSON.stringify(state),'club:suctre'));
-  }
-  writes.push(env.DB.prepare("DELETE FROM workspaces WHERE (id LIKE 'session:%' OR id LIKE 'reset:%') AND json_extract(data,'$.email')=?").bind(account.email));
-  writes.push(env.DB.prepare('DELETE FROM workspaces WHERE id=?').bind('account:'+account.email));
-  await env.DB.batch(writes);
-  return Response.json({ok:true},{headers:{'Cache-Control':'no-store','Set-Cookie':'suctre_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0'}});
- });
-}
