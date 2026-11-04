@@ -19,7 +19,7 @@ export async function sendVerificationCode(env:any,email:string,fetcher:typeof f
  await env.DB.prepare('INSERT INTO workspaces(id,version,data) VALUES(?,0,?) ON CONFLICT(id) DO UPDATE SET data=excluded.data,version=version+1').bind(id,JSON.stringify(record)).run();
  try{
   const response=await fetcher('https://api.resend.com/emails',{method:'POST',headers:{Authorization:'Bearer '+env.RESEND_API_KEY,'Content-Type':'application/json'},body:JSON.stringify({from:env.MAIL_FROM,to:[email],subject:'Sức Trẻ — Mã xác minh email',text:'Mã xác minh của bạn là: '+code+'\nMã có hiệu lực 10 phút. Nếu không yêu cầu, hãy bỏ qua email này.'}),signal:AbortSignal.timeout(15000)});
-  if(!response.ok||(await response.json()).id==null)throw new Error('mail failed');
+  if(!response.ok||((await response.json()) as any).id==null)throw new Error('mail failed');
  }catch{
   await env.DB.prepare('DELETE FROM workspaces WHERE id=?').bind(id).run();
   throw new Error('Chưa gửi được mã xác minh. Hãy kiểm tra cấu hình email.');
