@@ -66,14 +66,14 @@ test('Existing accounts must verify email separately; code is single-use',async(
  assert.equal(login.status,200);
  const cookie=login.headers.get('set-cookie')!.split(';')[0];
  let session=await accountEndpoint(f.env,new Request('https://club.example/api/auth',{headers:{cookie}}),f.fetcher);
- assert.equal((await session.json()).user.emailVerified,false);
+ assert.equal(((await session.json()) as any).user.emailVerified,false);
  assert.equal((await accountEndpoint(f.env,request({action:'verifyMyEmail',verificationCode:'123456'},cookie),f.fetcher)).status,400);
  const send=await accountEndpoint(f.env,request({action:'sendEmailCode'},cookie),f.fetcher);
  assert.equal(send.status,200);
  const code=f.code();
  assert.equal((await accountEndpoint(f.env,request({action:'verifyMyEmail',verificationCode:code},cookie),f.fetcher)).status,200);
  session=await accountEndpoint(f.env,new Request('https://club.example/api/auth',{headers:{cookie}}),f.fetcher);
- assert.equal((await session.json()).user.emailVerified,true);
+ assert.equal(((await session.json()) as any).user.emailVerified,true);
  f.sql.close();
 });
 test('Email sending configuration must exist and code requests are throttled',async()=>{
