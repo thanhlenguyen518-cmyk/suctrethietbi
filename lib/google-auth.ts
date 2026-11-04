@@ -30,7 +30,7 @@ export async function googleAuth(env:any,req:Request,fetcher:typeof fetch=fetch)
  if(existing){const account=JSON.parse(existing.data);if(account.googleSub!==profile.sub)return fail('Email này đã có tài khoản. Hãy đăng nhập bằng mật khẩu; chưa hỗ trợ tự liên kết tài khoản Google.',409)}
  const generation=existing?JSON.parse(existing.data).salt:crypto.randomUUID();
  const session=crypto.randomUUID()+crypto.randomUUID(),writes=[];
- if(!existing)writes.push(env.DB.prepare('INSERT INTO workspaces(id,version,data) VALUES(?,0,?)').bind('account:'+email,JSON.stringify({email,name:String(profile.name||email).slice(0,120),role:'borrower',googleSub:profile.sub,salt:generation,hash:'google-only'})));
+ if(!existing)writes.push(env.DB.prepare('INSERT INTO workspaces(id,version,data) VALUES(?,0,?)').bind('account:'+email,JSON.stringify({email,name:String(profile.name||email).slice(0,120),role:'borrower',googleSub:profile.sub,salt:generation,hash:'google-only',emailVerified:true})));
  writes.push(env.DB.prepare('INSERT INTO workspaces(id,version,data) VALUES(?,0,?)').bind('session:'+await digest(session),JSON.stringify({email,generation,issuedAt:Date.now(),expires:Date.now()+86400000})));
  await env.DB.batch(writes);
  const headers=new Headers({'Location':'/','Cache-Control':'no-store','Referrer-Policy':'no-referrer'});headers.append('Set-Cookie',cookie('',0));headers.append('Set-Cookie',`suctre_session=${session}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=86400`);
