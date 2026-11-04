@@ -26,7 +26,7 @@ function visibleState(s:any,req:Request){
   result.notices=result.notices.filter((n:any)=>ids.has(n.requestId)&&(n.to===email||n.to===role));
  }else{
   // Legacy notices used role identifiers, while newer notifications may target an email.
-  result.notices=result.notices.filter((n:any)=>n.to===role||n.to===email);
+  result.notices=result.notices.filter((n:any)=>n.to===role||n.to===email||(role==='board'&&n.to==='Ban chủ nhiệm')||(role==='staff'&&n.to==='Phụ trách thiết bị'));
  }
  return result;
 }
