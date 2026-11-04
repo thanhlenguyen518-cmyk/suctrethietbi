@@ -20,5 +20,7 @@ jobs:
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      - name: Regression tests
+        run: node --experimental-strip-types --test tests/workflow.test.mjs
       - name: Build Cloudflare application
         run: pnpm build:cloudflare
