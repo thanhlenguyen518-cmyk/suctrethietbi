@@ -9,3 +9,20 @@
 
 /* Account actions grouped into one accessible menu */
 .account-menu{position:relative}.account-menu>.secondary{display:flex;align-items:center;gap:9px}.account-menu .avatar{flex-shrink:0}.account-dropdown{position:absolute;right:0;top:calc(100% + 8px);min-width:190px;background:#fff;border:1px solid #dfe5dc;box-shadow:0 12px 28px #18322620;border-radius:9px;padding:7px;z-index:40}.account-dropdown button{width:100%;display:block;text-align:left;background:transparent;color:#43573a;padding:12px;font-size:12px;border-radius:6px}.account-dropdown button:hover{background:#edf3e9}.account-information{padding:12px 0}.account-information p{font-size:13px}.action-panel .callout button{width:auto;margin:4px}
+
+/* Small-screen borrowing forms, navigation and account controls */
+@media(max-width:760px){
+ aside{display:block;padding:12px 16px}
+ aside .brand{display:inline-flex}
+ aside nav{width:100%;max-width:100%;margin:12px 0 0;overflow-x:auto;padding-bottom:3px}
+ aside nav button{font-size:10px;gap:6px;padding:9px 11px;white-space:nowrap;flex-shrink:0}
+ aside nav button svg{flex-shrink:0}
+ .header-right .account-menu>.secondary{max-width:175px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+ .header-right .account-menu .avatar.small{display:grid}
+ .account-dropdown{z-index:130}
+ .table-wrap table{min-width:670px}
+ .modal.wide{width:100%}
+ .request-items>div{gap:12px}
+ .request-items>div span{min-width:0;flex-wrap:wrap}
+ .detail-info{grid-template-columns:1fr}
+}
