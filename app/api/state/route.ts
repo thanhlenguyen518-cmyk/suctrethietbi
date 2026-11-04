@@ -10,6 +10,7 @@ import {reportText,reminderText} from '../../../lib/ai-schema';
 import {imageInputs} from '../../../lib/evidence';
 import {mailReady} from '../../../lib/mail';
 import {personalLogs,attributeNewLogs} from '../../../lib/activity';
+import {borrowedQuantity,visibleNotices} from '../../../lib/visibility';
 function visibleState(s:any,req:Request){
  const result=publicState(s);
  const email=req.headers.get('x-suctre-account');
@@ -17,16 +18,16 @@ function visibleState(s:any,req:Request){
  result.logs=personalLogs(result.logs,email,req.headers.get('oai-authenticated-user-id'));
  const allRequests=result.requests;
  // Public inventory counts refer to all borrowers, not only the current user's records.
- result.activeBorrowedCount=allRequests.filter((r:any)=>r.status==='borrowed'&&!r.returnedAt).reduce((n:number,r:any)=>n+r.items.reduce((sum:number,i:any)=>sum+i.qty,0),0);
+ result.activeBorrowedCount=borrowedQuantity(allRequests);
  if(role==='borrower'){
   result.requests=result.requests.filter((r:any)=>r.accountEmail===email);
   const ids=new Set(result.requests.map((r:any)=>r.id));
   result.logs=result.logs.filter((l:any)=>ids.has(l.requestId));
   result.settings={};
-  result.notices=result.notices.filter((n:any)=>ids.has(n.requestId)&&(n.to===email||n.to===role));
+  result.notices=visibleNotices(result.notices,role,email,ids);
  }else{
   // Legacy notices used role identifiers, while newer notifications may target an email.
-  result.notices=result.notices.filter((n:any)=>n.to===role||n.to===email||(role==='board'&&n.to==='Ban chủ nhiệm')||(role==='staff'&&n.to==='Phụ trách thiết bị'));
+  result.notices=visibleNotices(result.notices,role,email);
  }
  return result;
 }
