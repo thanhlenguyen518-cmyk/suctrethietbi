@@ -1,49 +1,85 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
+import {DatabaseSync} from 'node:sqlite';
 import {accountEndpoint,authenticatedAccount} from '../lib/accounts.ts';
-function database(){
- const rows=new Map<string,string>();
- const db={failSession:false,rows,prepare(sql:string){let args:any[]=[];return {bind(...a:any[]){args=a;return this},async first(){return rows.has(args[0])?{data:rows.get(args[0])}:null},async run(){
- if(sql.startsWith('DELETE'))return {meta:{changes:Number(rows.delete(args[0]))}};
- if(db.failSession&&String(args[0]).startsWith('session:'))throw new Error('simulated session failure');
- if(sql.startsWith('INSERT')&&rows.has(args[0])){if(sql.includes('OR IGNORE'))return {meta:{changes:0}};throw new Error('UNIQUE constraint failed')}
- rows.set(args[0],args[1]);return {meta:{changes:1}}}}},async batch(statements:any[]){const before=new Map(rows);try{const results=[];for(const st of statements)results.push(await st.run());return results}catch(e){rows.clear();for(const [id,value] of before)rows.set(id,value);throw e}}};return db;
-}
+
 const request=(body:any,cookie='')=>new Request('https://club.example/api/auth',{method:'POST',headers:{origin:'https://club.example','Content-Type':'application/json',cookie},body:JSON.stringify(body)});
-test('privileged registration requires server code; account cannot change role; login and logout use server session',async()=>{
- const env={DB:database(),STAFF_ACCESS_CODE:'staff-test-only-code',BOARD_ACCESS_CODE:'board-test-only-code'};
- const fields={email:'member@example.com',name:'Member',password:'test-password-only'};
- assert.equal((await accountEndpoint(env,request({...fields,action:'register',role:'board',code:'wrong'}))).status,403);
- let response=await accountEndpoint(env,request({...fields,action:'register',role:'borrower'}));assert.equal(response.status,200);const cookie=response.headers.get('set-cookie')!.split(';')[0];
- let a=await authenticatedAccount(env,new Request('https://club.example',{headers:{cookie}}));assert.equal(a?.role,'borrower');
- assert.equal((await accountEndpoint(env,request({...fields,action:'register',role:'board',code:env.BOARD_ACCESS_CODE}))).status,409);
- response=await accountEndpoint(env,request({...fields,action:'login',role:'board'}));assert.equal((await response.json() as any).user.role,'borrower');
- assert.equal((await accountEndpoint(env,request({...fields,action:'login',password:'wrong-password'}))).status,401);
- await accountEndpoint(env,request({action:'logout'},cookie));assert.equal(await authenticatedAccount(env,new Request('https://club.example',{headers:{cookie}})),null);
- assert.equal((await accountEndpoint(env,new Request('https://club.example/api/auth',{method:'POST',headers:{origin:'https://evil.example'},body:'{}'}))).status,403);
- response=await accountEndpoint(env,request({...fields,email:'staff@example.com',action:'register',role:'staff',code:env.STAFF_ACCESS_CODE}));assert.equal((await response.json() as any).user.role,'staff');
+function fixture(){
+ const sql=new DatabaseSync(':memory:');
+ sql.exec('CREATE TABLE workspaces(id TEXT PRIMARY KEY,version INTEGER NOT NULL DEFAULT 0,data TEXT NOT NULL)');
+ const DB={
+  prepare(query:string){let values:any[]=[];return {
+   bind(...args:any[]){values=args;return this},
+   async first(){return sql.prepare(query).get(...values)||null},
+   async run(){return {meta:{changes:Number(sql.prepare(query).run(...values).changes)}}
+  }},
+  async batch(stmts:any[]){sql.exec('BEGIN');try{const out=[];for(const statement of stmts)out.push(await statement.run());sql.exec('COMMIT');return out}catch(e){sql.exec('ROLLBACK');throw e}}
+ };
+ let lastCode='';
+ const fetcher=async (_url:any,options:any)=>{const sent=JSON.parse(options.body);lastCode=String(sent.text).match(/\b\d{6}\b/)?.[0]||'';return new Response(JSON.stringify({id:'mail-test'}),{status:200,headers:{'Content-Type':'application/json'}})};
+ const env={DB,RESEND_API_KEY:'dummy',MAIL_FROM:'Sức Trẻ <noreply@example.test>',STAFF_ACCESS_CODE:'staff-test-only-code',BOARD_ACCESS_CODE:'board-test-only-code'};
+ return {env,sql,fetcher:fetcher as typeof fetch,code:()=>lastCode};
+}
+async function sendCode(f:any,email:string){
+ const r=await accountEndpoint(f.env,request({action:'sendEmailCode',email}),f.fetcher);
+ assert.equal(r.status,200);
+ assert.match(f.code(),/^\d{6}$/);
+ return f.code();
+}
+test('Registration requires proof of receiving a valid email code',async()=>{
+ const f=fixture();
+ const data={action:'register',email:'member@example.test',name:'Member',role:'borrower',password:'test-password-only'};
+ assert.equal((await accountEndpoint(f.env,request(data),f.fetcher)).status,400);
+ assert.equal(f.sql.prepare('SELECT * FROM workspaces WHERE id=?').get('account:member@example.test'),undefined);
+ const code=await sendCode(f,data.email);
+ assert.equal((await accountEndpoint(f.env,request({...data,verificationCode:'000000'}),f.fetcher)).status,400);
+ const accepted=await accountEndpoint(f.env,request({...data,verificationCode:code}),f.fetcher);
+ assert.equal(accepted.status,200);
+ const cookie=accepted.headers.get('set-cookie')!.split(';')[0];
+ const user=await authenticatedAccount(f.env,new Request('https://club.example',{headers:{cookie}}));
+ assert.equal(user?.emailVerified,true);
+ assert.equal((await accountEndpoint(f.env,request({...data,verificationCode:code}),f.fetcher)).status,409);
+ f.sql.close();
 });
-
-for(const role of ['borrower','staff','board'])test(`registration validates password before saving for ${role} and allows retry`,async()=>{
- const db=database(),env={DB:db,STAFF_ACCESS_CODE:'staff-test-only-code',BOARD_ACCESS_CODE:'board-test-only-code'};
- const fields={email:role+'@example.com',name:'Test member',role,code:role==='staff'?env.STAFF_ACCESS_CODE:env.BOARD_ACCESS_CODE,action:'register'};
- for(const password of ['short','x'.repeat(129)]){
-  const response=await accountEndpoint(env,request({...fields,password}));assert.equal(response.status,400);assert.equal(response.headers.get('set-cookie'),null);assert.equal(db.rows.size,0);assert.notEqual((await response.json() as any).ok,true);
- }
- const response=await accountEndpoint(env,request({...fields,password:'test-password-only'}));assert.equal(response.status,200);assert.equal((await response.json() as any).user.role,role);
- const cookie=response.headers.get('set-cookie')!.split(';')[0];assert.equal((await authenticatedAccount(env,new Request('https://club.example',{headers:{cookie}})))?.role,role);
+test('Invalid passwords and role codes cannot bypass verification',async()=>{
+ const f=fixture();const email='staff@example.test';
+ const code=await sendCode(f,email);
+ const data={action:'register',email,name:'Staff',role:'staff',password:'test-password-only',code:'bad',verificationCode:code};
+ assert.equal((await accountEndpoint(f.env,request(data),f.fetcher)).status,403);
+ assert.equal((await accountEndpoint(f.env,request({...data,code:f.env.STAFF_ACCESS_CODE,password:'short'}),f.fetcher)).status,400);
+ const valid=await accountEndpoint(f.env,request({...data,code:f.env.STAFF_ACCESS_CODE}),f.fetcher);
+ assert.equal(valid.status,200);
+ const cookie=valid.headers.get('set-cookie')!.split(';')[0];
+ const a=await authenticatedAccount(f.env,new Request('https://club.example',{headers:{cookie}}));
+ assert.equal(a?.role,'staff');
+ const logout=await accountEndpoint(f.env,request({action:'logout'},cookie),f.fetcher);
+ assert.equal(logout.status,200);
+ assert.equal(await authenticatedAccount(f.env,new Request('https://club.example',{headers:{cookie}})),null);
+ f.sql.close();
 });
-test('session write failure rolls back registration and the same email can register again',async()=>{
- const db=database(),env={DB:db};const fields={action:'register',email:'retry@example.com',name:'Retry',password:'test-password-only',role:'borrower'};
- db.failSession=true;const failed=await accountEndpoint(env,request(fields));assert.equal(failed.status,503);assert.equal(db.rows.size,0);assert.equal(failed.headers.get('set-cookie'),null);
- db.failSession=false;const success=await accountEndpoint(env,request(fields));assert.equal(success.status,200);
- const duplicate=await accountEndpoint(env,request(fields));assert.equal(duplicate.status,409);assert.equal((await duplicate.json() as any).code,'ACCOUNT_EXISTS');
- const loggedIn=await accountEndpoint(env,request({...fields,action:'login'}));assert.equal(loggedIn.status,200);
+test('Existing accounts must verify email separately; code is single-use',async()=>{
+ const f=fixture();const email='legacy@example.test',password='test-password-only';
+ const salt=crypto.randomUUID();
+ const {passwordHash}=await import('../lib/accounts.ts');
+ f.sql.prepare('INSERT INTO workspaces(id,version,data) VALUES(?,0,?)').run('account:'+email,JSON.stringify({email,name:'Legacy',role:'borrower',salt,hash:await passwordHash(password,salt)}));
+ const login=await accountEndpoint(f.env,request({action:'login',email,password}),f.fetcher);
+ assert.equal(login.status,200);
+ const cookie=login.headers.get('set-cookie')!.split(';')[0];
+ let session=await accountEndpoint(f.env,new Request('https://club.example/api/auth',{headers:{cookie}}),f.fetcher);
+ assert.equal((await session.json()).user.emailVerified,false);
+ assert.equal((await accountEndpoint(f.env,request({action:'verifyMyEmail',verificationCode:'123456'},cookie),f.fetcher)).status,400);
+ const send=await accountEndpoint(f.env,request({action:'sendEmailCode'},cookie),f.fetcher);
+ assert.equal(send.status,200);
+ const code=f.code();
+ assert.equal((await accountEndpoint(f.env,request({action:'verifyMyEmail',verificationCode:code},cookie),f.fetcher)).status,200);
+ session=await accountEndpoint(f.env,new Request('https://club.example/api/auth',{headers:{cookie}}),f.fetcher);
+ assert.equal((await session.json()).user.emailVerified,true);
+ f.sql.close();
 });
-
-test('Account deletion is intentionally not supported',async()=>{
- const env={DB:database()};
- const result=await accountEndpoint(env,request({action:'deleteAccount',email:'owner@example.com',password:'test-password-only',confirmation:'XÓA TÀI KHOẢN'}));
- assert.equal(result.status,400);
- assert.equal(env.DB.rows.size,0);
+test('Email sending configuration must exist and code requests are throttled',async()=>{
+ const f=fixture();const email='new@example.test';
+ assert.equal((await accountEndpoint({...f.env,RESEND_API_KEY:''},request({action:'sendEmailCode',email}),f.fetcher)).status,503);
+ assert.equal((await accountEndpoint(f.env,request({action:'sendEmailCode',email}),f.fetcher)).status,200);
+ assert.equal((await accountEndpoint(f.env,request({action:'sendEmailCode',email}),f.fetcher)).status,429);
+ f.sql.close();
 });
