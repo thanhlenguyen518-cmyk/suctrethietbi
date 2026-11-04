@@ -35,7 +35,7 @@ export function mutate(input:State,role:Role,action:string,p:any,now=Date.now())
   need(['borrower'],action==='resubmit'?['supplement']:undefined);validate(s,p,now);
   if(action==='resubmit'&&now>r.supplementUntil)fail('Đã quá 24 giờ bổ sung. Vui lòng tạo đơn mới.');
   const data={name:text(p.name,120),contact:text(p.contact,180),phone:text(p.phone,20),purpose:text(p.purpose),start:new Date(p.start).toISOString(),end:new Date(p.end).toISOString(),items:p.items.map((i:any)=>({id:i.id,qty:i.qty})),status:'review',updatedAt:now};
-  if(action==='create'){const n={...data,id:'MT-'+crypto.randomUUID().slice(0,8).toUpperCase(),createdAt:now};s.requests.unshift(n);log(s,role,n.id,'Gửi đơn mượn trực tuyến',now)}else{Object.assign(r,data);delete r.ai;log(s,role,r.id,'Bổ sung và gửi lại đơn',now)}return s;
+  if(action==='create'){const n={...data,submissionId:typeof p.submissionId==='string'&&/^[a-f0-9-]{36}$/i.test(p.submissionId)?p.submissionId:crypto.randomUUID(),id:'MT-'+crypto.randomUUID().slice(0,8).toUpperCase(),createdAt:now};s.requests.unshift(n);log(s,role,n.id,'Gửi đơn mượn trực tuyến',now)}else{Object.assign(r,data);delete r.ai;log(s,role,r.id,'Bổ sung và gửi lại đơn',now)}return s;
  }
  if(action==='cancel'){
   need(['borrower']);if(!r)fail('Không tìm thấy đơn mượn.');
