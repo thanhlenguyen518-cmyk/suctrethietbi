@@ -21,7 +21,7 @@ function visibleState(s:any,req:Request){
  result.activeBorrowedCount=borrowedQuantity(allRequests);
  if(role==='borrower'){
   result.requests=result.requests.filter((r:any)=>r.accountEmail===email);
-  const ids=new Set(result.requests.map((r:any)=>r.id));
+  const ids=new Set<string>(result.requests.map((r:any)=>String(r.id)));
   result.logs=result.logs.filter((l:any)=>ids.has(l.requestId));
   result.settings={};
   result.notices=visibleNotices(result.notices,role,email,ids);
