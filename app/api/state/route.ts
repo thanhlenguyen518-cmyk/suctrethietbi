@@ -10,7 +10,26 @@ import {reportText,reminderText} from '../../../lib/ai-schema';
 import {imageInputs} from '../../../lib/evidence';
 import {mailReady} from '../../../lib/mail';
 import {personalLogs,attributeNewLogs} from '../../../lib/activity';
-function visibleState(s:any,req:Request){const result=publicState(s);result.logs=personalLogs(result.logs,req.headers.get('x-suctre-account'),req.headers.get('oai-authenticated-user-id'));if(req.headers.get('x-suctre-role')==='borrower'){const email=req.headers.get('x-suctre-account');result.requests=result.requests.filter((r:any)=>r.accountEmail===email);const ids=new Set(result.requests.map((r:any)=>r.id));result.notices=result.notices.filter((n:any)=>ids.has(n.requestId));result.logs=result.logs.filter((l:any)=>ids.has(l.requestId));result.settings={};}return result;}
+function visibleState(s:any,req:Request){
+ const result=publicState(s);
+ const email=req.headers.get('x-suctre-account');
+ const role=req.headers.get('x-suctre-role');
+ result.logs=personalLogs(result.logs,email,req.headers.get('oai-authenticated-user-id'));
+ const allRequests=result.requests;
+ // Public inventory counts refer to all borrowers, not only the current user's records.
+ result.activeBorrowedCount=allRequests.filter((r:any)=>r.status==='borrowed'&&!r.returnedAt).reduce((n:number,r:any)=>n+r.items.reduce((sum:number,i:any)=>sum+i.qty,0),0);
+ if(role==='borrower'){
+  result.requests=result.requests.filter((r:any)=>r.accountEmail===email);
+  const ids=new Set(result.requests.map((r:any)=>r.id));
+  result.logs=result.logs.filter((l:any)=>ids.has(l.requestId));
+  result.settings={};
+  result.notices=result.notices.filter((n:any)=>ids.has(n.requestId)&&(n.to===email||n.to===role));
+ }else{
+  // Legacy notices used role identifiers, while newer notifications may target an email.
+  result.notices=result.notices.filter((n:any)=>n.to===role||n.to===email);
+ }
+ return result;
+}
 function publicState(s:any){return {...s,requests:s.requests.map((r:any)=>({...r,photos:(r.photos||[]).map(({key,...p}:any)=>p)})),settings:{...s.settings,calibration:undefined}}}
 export async function GET(req:Request){try{const {s,version}=await loadWorkspace(env,req);return json({...visibleState(s,req),version,aiReady:aiConfig(env).ready,aiConfiguration:{...aiConfig(env),fingerprint:aiFingerprint(env)},calibration:calibrationMetrics(s.settings.calibration||[],aiFingerprint(env)),mailReady:mailReady(env),schedulerEnabled:(env as any).SCHEDULER_ENABLED==='true'})}catch(e:any){return json({error:e.message==='AUTH'?'Vui lòng đăng nhập ChatGPT để sử dụng.':e.message},e.message==='AUTH'?401:503)}}
 export async function POST(req:Request){try{
