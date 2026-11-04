@@ -667,3 +667,150 @@ td small{font-size:12px}
  .page-heading h1{font-size:29px}
  .overview-bar h2{font-size:24px}
 }
+
+
+/* Sức Trẻ — storybook palette (Little Prince reference)
+   Main surfaces remain calm; illustration appears on the overview cover only. */
+:root{
+ --branch:#7D5F13;
+ --rosebud:#A83403;
+ --twinkle:#F1E05F;
+ --vine:#828B3B;
+ --fox:#A35F08;
+ --night:#1B3036;
+ --cream:#FFF8E3;
+ --brown:var(--night);
+ --sidebar-brown:var(--night);
+ --topbar-brown:#F6EECF;
+ --yellow:#F8F0C6;
+ --butter:#F1E05F;
+ --azure:#DEE8DA;
+ --canvas:#FCF9EE;
+ --paper:#FFFDF7;
+ --text-soft:#58615A;
+ --line-warm:#E6E0C9;
+ --ink:var(--night);
+ --muted:var(--text-soft);
+ --green:var(--night);
+ --line:var(--line-warm);
+ --accent-soft:var(--yellow);
+}
+html{background:var(--canvas)}
+body{
+ color:var(--night);
+ background:var(--canvas);
+}
+aside,aside .brand{color:#FFF8E3}
+aside{background:var(--night);border-right:1px solid #0F2227}
+aside .brand small,aside .nav-label,aside .profile small{color:#E2E6D4}
+aside nav button{color:#E8EFE4}
+aside nav button:hover{background:#2C4646;border-color:#4A6260;color:#fff}
+aside nav button.active{
+ background:#F2EAC3;
+ color:var(--night);
+ border-color:#DDD18D;
+ box-shadow:inset 4px 0 0 var(--rosebud)
+}
+aside nav i{background:#F1E05F;color:var(--night)}
+aside .logo{background:var(--twinkle);color:var(--night)}
+aside .logo:after{background:#A83403}
+aside .profile{border-color:#43575B}
+header{background:var(--topbar-brown);border-bottom:1px solid #E2D6A8}
+header .breadcrumb,header .breadcrumb b{color:var(--night)}
+header .header-right .account-menu>.secondary{
+ color:var(--night);background:#FFFCF1;border-color:#C8C69A
+}
+.page-heading .eyebrow{color:var(--branch)}
+.page-heading h1:after{background:var(--twinkle);opacity:.65}
+.primary{background:var(--rosebud);border-color:var(--rosebud);color:#FFFDF8;box-shadow:2px 3px 0 #DCCDA5}
+.primary:hover{background:#8C2A04;border-color:#8C2A04;box-shadow:2px 3px 0 #D2C194}
+.secondary{background:#EEF0DE;color:var(--night);border-color:#C5D0B8}
+.secondary:hover{background:#E2E9C9;border-color:var(--vine);color:var(--night)}
+.link{color:var(--rosebud);text-decoration-color:#E1BB88}
+.iconbtn{background:#F6EDC9;color:var(--night);border-color:#DFD1A5}
+.iconbtn:hover{background:#F1E05F;border-color:#B29D4C}
+.panel,.stat,.equipment-card,.setting,.modal{
+ background:var(--paper);border-color:var(--line-warm)
+}
+.stat:before{background:#F1E05F;opacity:.38}
+.stat:nth-child(2):before{background:#DDE6D1}
+.stat:nth-child(3):before{background:#E8D8B6}
+.stat:nth-child(4):before{background:#F0DDD1}
+.stat strong{color:var(--night)}
+.section-head h2,.equipment-body h3{color:var(--night)}
+th{background:#F6F0DA;border-color:#E7DFBF;color:#26383C}
+td,td b{color:#26383C}
+tbody tr:hover{background:#FBF5DE}
+.search{background:#FFFEFA;border-color:#D9D6BF}
+input,textarea,select{color:var(--night);border-color:#C9CDBD}
+input:focus,textarea:focus,select:focus{border-color:var(--vine)}
+.notice-icon{background:#E5EDD6;color:var(--night)}
+.calendar-row{background:var(--paper)}
+.calendar-row:hover{background:#F7F5E3}
+.calendar-row svg{color:var(--branch)}
+.equipment-visual{background:#E6EBD8;color:var(--night)}
+.equipment-visual.mic{background:#F7EFC7;color:var(--night)}
+.equipment-visual.camera{background:#E6EEDB;color:var(--night)}
+.equipment-visual.projector{background:#E9E6D2;color:var(--night)}
+.equipment-visual>span{color:var(--night)}
+.badge.ready,.badge.closed{background:#DFEBD4;color:#315030;border-color:#B4CEAB}
+.badge.borrowed,.badge.handover{background:#DDE9E7;color:#23505A;border-color:#B1D0CD}
+.badge.review,.badge.board,.badge.supplement,.badge.payment,.badge.compensation{
+ background:#F8F0CA;color:#66501B;border-color:#E5D49C
+}
+.badge.rejected,.badge.expired,.badge.incident,.badge.unavailable{background:#F9E2D7;color:#8C2B13;border-color:#E9B6A4}
+.action-panel{background:#F3F5E8;border-color:#CCD4B9}
+.action-panel h3,.action-panel>p,.action-panel small{color:var(--night)}
+.callout,.email-verify{background:#F8F1D9;border-color:#E9DFAE}
+.error{color:#872E1C}
+.toast{background:var(--night)}
+::selection{background:#F1E05F;color:#1B3036}
+.story-cover{
+ display:grid;grid-template-columns:minmax(230px,41%) 1fr;
+ align-items:stretch;overflow:hidden;isolation:isolate;
+ border:1px solid #D8D9BD;border-radius:20px;
+ background:#F9F0D4;min-height:260px;
+ box-shadow:3px 5px 0 rgba(27,48,54,.06);
+}
+.story-cover-illustration{min-width:0;min-height:255px;background:#1B3036}
+.story-cover-illustration img{
+ display:block;width:100%;height:100%;
+ object-fit:cover;object-position:center center;
+}
+.story-cover-content{
+ min-width:0;display:flex;flex-direction:column;align-items:flex-start;
+ justify-content:center;gap:14px;padding:clamp(22px,3vw,40px);
+ position:relative;
+}
+.story-cover-content:after{
+ content:'✦';position:absolute;right:24px;top:12px;
+ font-size:38px;color:var(--fox);opacity:.6;transform:rotate(-12deg);
+ pointer-events:none;
+}
+.story-cover-eyebrow{
+ color:#695316;font-size:11px;letter-spacing:1px;
+ font-family:var(--font-interface);font-weight:850;
+}
+.story-cover h2{
+ font-family:var(--font-editorial),Georgia,serif;
+ color:var(--night);font-size:clamp(25px,2.5vw,36px);
+ font-weight:760;line-height:1.18;letter-spacing:-.5px;
+ max-width:440px;margin:0;
+}
+.story-cover p{
+ margin:0;max-width:425px;color:#3B4D48;
+ font:600 14px/1.65 var(--font-interface);
+}
+.story-cover .primary{margin-top:8px;min-height:45px;position:relative;z-index:1}
+@media(max-width:760px){
+ aside{background:var(--night);border-bottom-color:#0F2227}
+ aside nav button{color:#E8EFE4}
+ aside nav button.active{color:var(--night)}
+ header{background:var(--topbar-brown)}
+ .story-cover{grid-template-columns:1fr}
+ .story-cover-illustration{height:245px;min-height:245px}
+ .story-cover-illustration img{object-position:50% 35%}
+ .story-cover-content{padding:23px;gap:10px}
+ .story-cover h2{font-size:27px}
+ .story-cover p{font-size:13px}
+}
