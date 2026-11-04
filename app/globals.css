@@ -899,3 +899,13 @@ aside .logo:after{display:none}
  .story-cover h2{font-size:17px}
  .story-cover p{font-size:10px}
 }
+
+
+/* Preserve the supplied cover lettering in the compact composition. */
+.story-cover-illustration{display:flex;align-items:center;justify-content:center}
+.story-cover-illustration img{
+ width:100%;height:100%;object-fit:contain;object-position:center;
+}
+@media(max-width:760px){
+ .story-cover-illustration img{object-fit:contain;object-position:center}
+}
