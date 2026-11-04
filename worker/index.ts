@@ -1,10 +1,14 @@
 import {googleAuth} from '../lib/google-auth';
+import {runMaintenance} from '../lib/jobs';
 import {accountEndpoint,authenticatedAccount} from "../lib/accounts";
 import handler from "vinext/server/fetch-handler";
 import { runWithConnectorBinding } from "../lib/connector-context";
 import type { ConnectorBinding } from "../lib/connector-contract.mjs";
 
 const worker = {
+  async scheduled(_event: any, env: Cloudflare.Env, ctx: ExecutionContext) {
+    if ((env as any).SCHEDULER_ENABLED === 'true') ctx.waitUntil(runMaintenance(env));
+  },
   async fetch(request: Request, env: Cloudflare.Env, ctx: ExecutionContext<{ CONNECTORS?: ConnectorBinding }>) {
     if ((env as any).PUBLIC_DEMO === "true") {
       const url = new URL(request.url);
