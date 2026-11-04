@@ -13,6 +13,7 @@ export function validate(s:State,p:any,now=Date.now()){
  if(!text(p.name)||!text(p.contact)||!text(p.purpose)||!text(p.start)||!text(p.end)) fail('Vui lòng điền đủ tên, liên hệ, mục đích và thời gian.');
  if(!Number.isFinite(Date.parse(p.start))||!Number.isFinite(Date.parse(p.end))||Date.parse(p.end)<=Date.parse(p.start))fail('Hạn trả phải sau thời gian nhận.');
  if(Date.parse(p.start)<now-60000)fail('Thời gian nhận phải từ hiện tại trở đi.');
+ if(p.phone&&(!/^\+?[0-9 .()-]{9,20}$/.test(String(p.phone).trim())))fail('Số điện thoại không hợp lệ.');
  if(!Array.isArray(p.items)||p.items.length===0||p.items.length>30)fail('Chọn ít nhất một thiết bị.');
  const ids=new Set();for(const i of p.items){if(ids.has(i.id))fail('Mỗi mã thiết bị chỉ được xuất hiện một lần.');ids.add(i.id);if(!s.equipment.some(e=>e.id===i.id)||!Number.isSafeInteger(i.qty)||i.qty<=0)fail('Mã thiết bị hoặc số lượng không hợp lệ.');}
 }
@@ -33,7 +34,7 @@ export function mutate(input:State,role:Role,action:string,p:any,now=Date.now())
  if(action==='create'||action==='resubmit'){
   need(['borrower'],action==='resubmit'?['supplement']:undefined);validate(s,p,now);
   if(action==='resubmit'&&now>r.supplementUntil)fail('Đã quá 24 giờ bổ sung. Vui lòng tạo đơn mới.');
-  const data={name:text(p.name,120),contact:text(p.contact,180),purpose:text(p.purpose),start:new Date(p.start).toISOString(),end:new Date(p.end).toISOString(),items:p.items.map((i:any)=>({id:i.id,qty:i.qty})),status:'review',updatedAt:now};
+  const data={name:text(p.name,120),contact:text(p.contact,180),phone:text(p.phone,20),purpose:text(p.purpose),start:new Date(p.start).toISOString(),end:new Date(p.end).toISOString(),items:p.items.map((i:any)=>({id:i.id,qty:i.qty})),status:'review',updatedAt:now};
   if(action==='create'){const n={...data,id:'MT-'+crypto.randomUUID().slice(0,8).toUpperCase(),createdAt:now};s.requests.unshift(n);log(s,role,n.id,'Gửi đơn mượn trực tuyến',now)}else{Object.assign(r,data);delete r.ai;log(s,role,r.id,'Bổ sung và gửi lại đơn',now)}return s;
  }
  if(action==='cancel'){
