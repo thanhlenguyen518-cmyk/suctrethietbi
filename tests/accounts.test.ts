@@ -11,7 +11,7 @@ function fixture(){
   prepare(query:string){let values:any[]=[];return {
    bind(...args:any[]){values=args;return this},
    async first(){return sql.prepare(query).get(...values)||null},
-   async run(){return {meta:{changes:Number(sql.prepare(query).run(...values).changes)}}
+   async run(){return {meta:{changes:Number(sql.prepare(query).run(...values).changes)}};}
   }},
   async batch(stmts:any[]){sql.exec('BEGIN');try{const out=[];for(const statement of stmts)out.push(await statement.run());sql.exec('COMMIT');return out}catch(e){sql.exec('ROLLBACK');throw e}}
  };
