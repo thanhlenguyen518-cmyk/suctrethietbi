@@ -814,3 +814,88 @@ input:focus,textarea:focus,select:focus{border-color:var(--vine)}
  .story-cover h2{font-size:27px}
  .story-cover p{font-size:13px}
 }
+
+
+/* Compact overview banner — less decoration, more useful information. */
+.story-cover{
+  display:grid;
+  grid-template-columns:minmax(215px,32%) minmax(0,1fr);
+  align-items:stretch;
+  width:100%;
+  height:214px;
+  min-height:214px;
+  max-height:214px;
+  overflow:hidden;
+  border:1px solid #d6d6b9;
+  border-radius:15px;
+  background:#f9f1d8;
+  box-shadow:0 2px 8px rgba(27,48,54,.05);
+}
+.story-cover-illustration{
+  position:relative;
+  height:214px;
+  min-height:214px;
+  max-height:214px;
+  overflow:hidden;
+  background:#142a36;
+}
+.story-cover-illustration img{
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  object-position:50% 25%;
+}
+.story-cover-content{
+  justify-content:center;
+  align-items:flex-start;
+  gap:9px;
+  min-width:0;
+  padding:20px 30px;
+}
+.story-cover-content:after,
+.overview-bar:after,
+.overview-bar:before,
+.story-cover-eyebrow:before{
+  display:none!important;
+  content:none!important;
+}
+.story-cover h2{
+  max-width:580px;
+  color:#1b3036;
+  font-family:var(--font-editorial),Georgia,serif;
+  font-size:clamp(23px,2.2vw,30px);
+  line-height:1.2;
+  margin:0;
+  font-weight:750;
+}
+.story-cover p{font-size:13px;line-height:1.5;max-width:490px;margin:0}
+.story-cover .primary{margin-top:5px;min-height:40px;padding:9px 15px}
+.page-heading h1:after{display:none}
+.stat:before{display:none}
+aside .logo:after{display:none}
+.equipment-visual:after{display:none}
+@media(max-width:760px){
+  .story-cover{
+    grid-template-columns:36% 64%;
+    height:185px;
+    min-height:185px;
+    max-height:185px;
+  }
+  .story-cover-illustration{
+    height:185px;
+    min-height:185px;
+    max-height:185px;
+  }
+  .story-cover-illustration img{object-position:50% 20%}
+  .story-cover-content{padding:12px 14px;gap:7px}
+  .story-cover h2{font-size:clamp(17px,4vw,24px)}
+  .story-cover p{font-size:11px;line-height:1.4}
+  .story-cover .primary{font-size:11px;min-height:36px;padding:8px 10px;margin:0}
+}
+@media(max-width:390px){
+ .story-cover{grid-template-columns:32% 68%}
+ .story-cover-content{padding:10px}
+ .story-cover h2{font-size:17px}
+ .story-cover p{font-size:10px}
+}
