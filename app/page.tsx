@@ -13,7 +13,7 @@ const icons:any={speaker:Speaker,mic:Mic,camera:Camera,projector:Projector};
 function Badge({status}:{status:string}){return <span className={'badge '+status}>{labels[status]||status}</span>}
 export default function Page(){
  const [resetToken,setResetToken]=useState<string|null>(null);useEffect(()=>{const token=new URLSearchParams(window.location.hash.slice(1)).get('reset');if(token){setResetToken(token);history.replaceState(null,'',window.location.pathname+window.location.search)}},[]);
- [accountMenu,setAccountMenu]=useState(false),[cancelId,setCancelId]=useState<string|null>(null);
+ const [accountMenu,setAccountMenu]=useState(false),[cancelId,setCancelId]=useState<string|null>(null);
  const [user,setUser]=useState<any>(undefined);
  const [data,setData]=useState<any>(null),[error,setError]=useState(''),[busy,setBusy]=useState(false),[role,setRole]=useState('staff'),[tab,setTab]=useState('Tổng quan'),[search,setSearch]=useState(''),[filter,setFilter]=useState(''),[modal,setModal]=useState(''),[selected,setSelected]=useState<any>(null),[toast,setToast]=useState(''),[note,setNote]=useState(''),[checked,setChecked]=useState(false),[amount,setAmount]=useState(''),[damage,setDamage]=useState<any>({}),[editing,setEditing]=useState<any>(null),[signer,setSigner]=useState(''),[calibrationFile,setCalibrationFile]=useState<any[]>([]),[calibrationProgress,setCalibrationProgress]=useState('');
  const [hasDraft,setHasDraft]=useState(false);
