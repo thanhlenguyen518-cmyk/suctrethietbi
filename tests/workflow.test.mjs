@@ -107,3 +107,12 @@ test('Cannot reduce stock below active reservations and damaged devices',()=>{
  const next=mutate(source,'staff','updateEquipment',{id:'TB001',name:'Máy ảnh',category:'Ghi hình',total:2,value:1},now);
  assert.equal(next.equipment[0].total,2);
 });
+
+test('Ban chủ nhiệm can edit equipment but cannot lower stock below reserved quantities',()=>{
+ const source=state('ready');
+ const updated=mutate(source,'board','updateEquipment',{id:'TB001',name:'Máy ảnh CLB',category:'Ghi hình',total:3,value:2000000},now);
+ assert.equal(updated.equipment[0].name,'Máy ảnh CLB');
+ assert.equal(updated.equipment[0].total,3);
+ assert.equal(updated.logs[0].role,'board');
+ assert.throws(()=>mutate(source,'board','updateEquipment',{id:'TB001',name:'Máy ảnh CLB',category:'Ghi hình',total:0,value:2000000},now),/không hợp lệ/);
+});
