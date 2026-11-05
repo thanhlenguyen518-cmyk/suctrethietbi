@@ -6,6 +6,11 @@ export function borrowedQuantity(requests:any[]):number{
  return requests.filter(r=>r.status==='borrowed'&&!r.returnedAt)
   .reduce((total,r)=>total+r.items.reduce((sum:number,i:any)=>sum+i.qty,0),0);
 }
+/** Equipment reserved for pickup, excluding equipment already signed out. */
+export function reservedQuantity(requests:any[]):number{
+ return requests.filter(r=>['ready','handover'].includes(r.status))
+  .reduce((total,r)=>total+(r.items||[]).reduce((sum:number,i:any)=>sum+Number(i.qty||0),0),0);
+}
 export function visibleNotices(notices:any[],role:string|null,email:string|null,allowedRequestIds?:Set<string>){
  return notices.filter(n=>{
   if(role==='borrower')return !!allowedRequestIds?.has(n.requestId)&&(n.to===email||n.to==='borrower');
