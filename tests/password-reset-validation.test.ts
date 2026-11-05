@@ -53,3 +53,31 @@ test('valid email reset token can change password once only',async()=>{
  assert.equal((await resetPassword(env,req,body)).status,400);
  sql.close();
 });
+
+test('password recovery emails use query links that survive mobile Gmail browsers',async()=>{
+ const {sql,db}=setup();
+ const email='member@example.test';
+ const hash='existing-password-hash';
+ sql.prepare('INSERT INTO workspaces(id,data) VALUES(?,?)').run('account:'+email,JSON.stringify({email,hash}));
+ let text='';
+ const fetcher=async (_url:any, options:any)=>{
+  const body=JSON.parse(options.body);
+  text=body.text;
+  return new Response(JSON.stringify({id:'accepted'}),{status:200,headers:{'Content-Type':'application/json'}});
+ };
+ const env={DB:db,RESEND_API_KEY:'test',MAIL_FROM:'CLB Sức Trẻ <noreply@example.test>'};
+ const request=new Request('https://muonthietbisuctre.suctreclub.workers.dev/api/auth');
+ const response=await resetPassword(env,request,{action:'forgotPassword',email},fetcher as typeof fetch);
+ assert.equal(response.status,200,await response.clone().text());
+ const match=text.match(/https:\/\/[^\s]+/);
+ assert.ok(match,'email must contain URL');
+ const url=new URL(match[0]);
+ assert.equal(url.hostname,'muonthietbisuctre.suctreclub.workers.dev');
+ assert.equal(url.hash,'');
+ const token=url.searchParams.get('reset');
+ assert.match(token||'',/^[a-f0-9-]{72}$/);
+ assert.equal(text.includes('\\\\n'),false,'email must contain real line break, not escaped backslash-n');
+ const row:any=sql.prepare('SELECT data FROM workspaces WHERE id=?').get('reset:'+await digest(token!));
+ assert.ok(row);
+ sql.close();
+});
