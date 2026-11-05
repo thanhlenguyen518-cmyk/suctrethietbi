@@ -1,5 +1,6 @@
 import {resetPassword} from './password-reset.ts';
 import {sendVerificationCode,consumeVerificationCode} from './email-verification.ts';
+import {mailReady} from './mail.ts';
 export type Account={email:string;name:string;role:'borrower'|'staff'|'board';salt:string;hash:string;emailVerified?:boolean};
 export const digest=async(s:string)=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)))).map(x=>x.toString(16).padStart(2,'0')).join('');
 export async function passwordHash(password:string,salt:string){const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(password),'PBKDF2',false,['deriveBits']);return Array.from(new Uint8Array(await crypto.subtle.deriveBits({name:'PBKDF2',salt:new TextEncoder().encode(salt),iterations:100000,hash:'SHA-256'},key,256))).map(x=>x.toString(16).padStart(2,'0')).join('')}
@@ -7,7 +8,7 @@ async function read(db:any,id:string){const row=await db.prepare('SELECT data FR
 export async function authenticatedAccount(env:any,req:Request):Promise<Account|null>{const token=req.headers.get('cookie')?.match(/(?:^|;\s*)suctre_session=([a-f0-9-]{72})(?:;|$)/)?.[1];if(!token)return null;const session=await read(env.DB,'session:'+await digest(token));if(!session||session.expires<Date.now())return null;const account=await read(env.DB,'account:'+session.email);if(session.generation&&session.generation!==account?.salt)return null;if(account?.passwordChangedAt&&(!session.issuedAt||session.issuedAt<=account.passwordChangedAt))return null;return account}
 export async function accountEndpoint(env:any,req:Request,fetcher:typeof fetch=fetch){const reply=(data:any,status=200,cookie?:string)=>Response.json(data,{status,headers:{'Cache-Control':'no-store',...(cookie?{'Set-Cookie':cookie}:{})}});try{
  if(!env.DB)return reply({error:'Cơ sở dữ liệu chưa sẵn sàng.'},503);
- if(req.method==='GET'){const a=await authenticatedAccount(env,req);return reply({user:a?{email:a.email,name:a.name,role:a.role,emailVerified:a.emailVerified===true}:null})}
+ if(req.method==='GET'){const a=await authenticatedAccount(env,req);return reply({user:a?{email:a.email,name:a.name,role:a.role,emailVerified:a.emailVerified===true}:null,emailVerificationAvailable:mailReady(env)})}
  if(req.method!=='POST')return reply({error:'Method not allowed'},405);
  if(req.headers.get('origin')!==new URL(req.url).origin)return reply({error:'Nguồn yêu cầu không hợp lệ.'},403);
  const raw=await req.text();if(raw.length>4096)return reply({error:'Dữ liệu quá lớn.'},413);let b:any;try{b=JSON.parse(raw)}catch{return reply({error:'Dữ liệu tài khoản không hợp lệ.'},400)}
