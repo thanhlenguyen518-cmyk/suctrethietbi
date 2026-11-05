@@ -136,3 +136,25 @@ test('Staff and board cannot process an unapproved overdue request',()=>{
  assert.throws(()=>mutate(board,'board','approve',{id:'MT-001',approved:false,note:'Từ chối'},time),/Chỉ được xem/);
  assert.throws(()=>mutate(supplement,'borrower','cancel',{id:'MT-001',confirmed:true},time),/Chỉ được xem/);
 });
+
+test('Borrower may request return before the scheduled deadline without releasing equipment',()=>{
+ const t=now+90*60*1000;const v=state('borrowed');v.requests[0].signedAt=now+60*60*1000;
+ const next=mutate(v,'borrower','requestEarlyReturn',{id:'MT-001',confirmed:true,note:'Trả sau khi kết thúc chương trình'},t);
+ assert.equal(next.requests[0].status,'borrowed');
+ assert.equal(next.requests[0].earlyReturnRequestedAt,t);
+ assert.equal(next.requests[0].returnedAt,undefined);
+ assert.equal(borrowedQuantity(next.requests),1);
+ assert.equal(next.notices.some(n=>n.to==='staff'&&n.requestId==='MT-001'),true);
+ assert.throws(()=>mutate(next,'borrower','requestEarlyReturn',{id:'MT-001',confirmed:true},t+1000),/đã gửi yêu cầu/);
+ const returned=mutate(next,'staff','return',{id:'MT-001',note:'Đã kiểm tra máy và phụ kiện: nguyên vẹn',checked:true,damage:[]},t+2000);
+ assert.equal(returned.requests[0].status,'closed');
+ assert.equal(returned.requests[0].returnedEarly,true);
+ assert.equal(borrowedQuantity(returned.requests),0);
+});
+test('Early return is not self-confirmable and rejects invalid states',()=>{
+ const t=now+90*60*1000;const v=state('borrowed');v.requests[0].signedAt=now+60*60*1000;
+ assert.throws(()=>mutate(v,'borrower','requestEarlyReturn',{id:'MT-001',confirmed:false},t),/xác nhận/);
+ assert.throws(()=>mutate(v,'board','requestEarlyReturn',{id:'MT-001',confirmed:true},t),/Vai trò/);
+ assert.throws(()=>mutate(v,'borrower','requestEarlyReturn',{id:'MT-001',confirmed:true},Date.parse(end)),/đến hạn/);
+ assert.throws(()=>mutate(state('ready'),'borrower','requestEarlyReturn',{id:'MT-001',confirmed:true},t),/Trạng thái/);
+});
