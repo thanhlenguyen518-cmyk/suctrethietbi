@@ -1,6 +1,6 @@
 import {authenticatedAccount} from '../../../lib/accounts';
 import {env} from 'cloudflare:workers';
-import {mutate} from '../../../lib/workflow';
+import {mutate,displayStatus,isApprovalOverdue} from '../../../lib/workflow';
 import {runAI,aiConfig,aiFingerprint} from '../../../lib/ai';
 import {loadWorkspace,loadOwner,saveWorkspace,sameOrigin,json} from '../../../lib/storage';
 import {withLock} from '../../../lib/locking';
@@ -13,6 +13,7 @@ import {personalLogs,attributeNewLogs} from '../../../lib/activity';
 import {borrowedQuantity,reservedQuantity,visibleNotices} from '../../../lib/visibility';
 function visibleState(s:any,req:Request){
  const result=publicState(s);
+ result.requests=result.requests.map((r:any)=>({...r,status:displayStatus(r)}));
  const email=req.headers.get('x-suctre-account');
  const role=req.headers.get('x-suctre-role');
  result.logs=personalLogs(result.logs,email,req.headers.get('oai-authenticated-user-id'));
@@ -38,7 +39,8 @@ export async function POST(req:Request){try{
  sameOrigin(req);if(Number(req.headers.get('content-length')||0)>200000)throw new Error('Dữ liệu quá lớn.');const b:any=await req.json();if(JSON.stringify(b).length>200000)throw new Error('Dữ liệu quá lớn.');if(!['borrower','staff','board'].includes(b.role))throw new Error('Vai trò không hợp lệ.');const assigned=req.headers.get('x-suctre-role');if(assigned&&b.role!==assigned)return json({error:'Bạn không có quyền sử dụng vai trò này.'},403);const initial=await loadWorkspace(env,req);
  return await withLock(initial.db,initial.owner,async()=>{
  const verifiedUser=req.headers.get('x-suctre-account')?await authenticatedAccount(env,req):null;if(req.headers.get('x-suctre-account')&&!verifiedUser)return json({error:'Phiên đăng nhập đã kết thúc.'},401);if(['create','resubmit'].includes(b.action)&&req.headers.get('x-suctre-account')&&verifiedUser?.emailVerified!==true)return json({error:'Bạn cần xác minh email trong Thông tin tài khoản trước khi gửi đơn.'},403);
- const {owner,db,s,version}=await loadOwner(env,initial.owner);if(b.action==='create'&&typeof b.payload?.submissionId==='string'&&b.payload.submissionId.length===36&&s.requests.some((r:any)=>r.submissionId===b.payload.submissionId&&r.accountEmail===req.headers.get('x-suctre-account')))return json({ok:true,duplicate:true});if(b.version!==version&&b.action!=='create')return json({error:'Dữ liệu đã thay đổi. Tải lại trước khi thực hiện.'},409);const previousLogs=[...s.logs];let next:any=s;const p=b.payload||{};const account=req.headers.get('x-suctre-account');if(assigned==='borrower'){if(p.id&&!s.requests.some((r:any)=>r.id===p.id&&r.accountEmail===account))return json({error:'Bạn không có quyền thao tác hồ sơ này.'},403);if(['create','resubmit'].includes(b.action)){p.name=decodeURIComponent(req.headers.get('x-suctre-name')||'');p.contact=account;}}
+ const {owner,db,s,version}=await loadOwner(env,initial.owner);if(b.action==='create'&&typeof b.payload?.submissionId==='string'&&b.payload.submissionId.length===36&&s.requests.some((r:any)=>r.submissionId===b.payload.submissionId&&r.accountEmail===req.headers.get('x-suctre-account')))return json({ok:true,duplicate:true});if(b.version!==version&&b.action!=='create')return json({error:'Dữ liệu đã thay đổi. Tải lại trước khi thực hiện.'},409);const previousLogs=[...s.logs];let next:any=s;const p=b.payload||{};
+ if(p.id&&isApprovalOverdue(s.requests.find((r:any)=>r.id===p.id)))return json({error:'Đơn đã quá thời gian nhận và chưa được duyệt. Chỉ được xem thông tin.',code:'APPROVAL_OVERDUE'},409);const account=req.headers.get('x-suctre-account');if(assigned==='borrower'){if(p.id&&!s.requests.some((r:any)=>r.id===p.id&&r.accountEmail===account))return json({error:'Bạn không có quyền thao tác hồ sơ này.'},403);if(['create','resubmit'].includes(b.action)){p.name=decodeURIComponent(req.headers.get('x-suctre-name')||'');p.contact=account;}}
  if(b.action==='ai'){
   if(b.role!=='staff')throw new Error('Chỉ phụ trách thiết bị được thực hiện.');const r=s.requests.find((r:any)=>r.id===p.id);if(!r)throw new Error('Không tìm thấy hồ sơ.');const kind=p.kind;
   if(!['check','reminder','incident'].includes(kind)||kind==='check'&&r.status!=='review'||kind==='incident'&&r.status!=='incident'||kind==='reminder'&&(r.status!=='borrowed'||Date.parse(r.end)>=Date.now()))throw new Error('Trạng thái không phù hợp cho tác vụ.');
