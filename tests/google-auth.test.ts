@@ -3,3 +3,12 @@ const base='https://club.example/api/auth/google';
 test('Google login fails closed without credentials',async()=>{assert.equal((await googleAuth({},new Request(base))).status,503)});
 test('Google callback rejects forged state before contacting provider',async()=>{let called=false;const r=await googleAuth({DB:{},GOOGLE_CLIENT_ID:'test',GOOGLE_CLIENT_SECRET:'test'},new Request(base+'/callback?state=forged&code=fake'),async()=>{called=true;throw Error()});assert.equal(r.status,400);assert.equal(called,false)});
 test('Google authorization uses state, PKCE and minimal scopes',async()=>{let data:any;const DB={prepare(){return {bind(_id:string,value:string){data=JSON.parse(value);return this},async run(){}}}};const r=await googleAuth({DB,GOOGLE_CLIENT_ID:'test',GOOGLE_CLIENT_SECRET:'test'},new Request(base));assert.equal(r.status,302);const u=new URL(r.headers.get('location')!);assert.equal(u.origin,'https://accounts.google.com');assert.equal(u.searchParams.get('code_challenge_method'),'S256');assert.equal(u.searchParams.get('scope'),'openid email profile');assert.ok(data.verifier);assert.match(r.headers.get('set-cookie')!,/HttpOnly; Secure; SameSite=Lax/)});
+
+test('Google OAuth uses the exact live Worker host for its callback',async()=>{
+ const DB={prepare(){return {bind(){return this},async run(){}}}};
+ const origin='https://muonthietbisuctre.suctreclub.workers.dev';
+ const result=await googleAuth({DB,GOOGLE_CLIENT_ID:'test',GOOGLE_CLIENT_SECRET:'test'},new Request(origin+'/api/auth/google'));
+ assert.equal(result.status,302);
+ const target=new URL(result.headers.get('location')!);
+ assert.equal(target.searchParams.get('redirect_uri'),origin+'/api/auth/google/callback');
+});
