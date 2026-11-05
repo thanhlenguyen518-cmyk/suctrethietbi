@@ -102,7 +102,19 @@ export function mutate(input:State,role:Role,action:string,p:any,now=Date.now())
  else if(action==='approve'){need(['board'],['board']);if(Date.parse(r.end)<=now)fail('Lịch mượn đã kết thúc. Không thể duyệt đơn quá hạn.');if(typeof p.approved!=='boolean')fail('Chọn đồng ý hoặc từ chối đơn.');if(p.approved===false&&!text(p.note))fail('Nhập lý do từ chối đơn.');r.boardNote=text(p.note)||'Ban chủ nhiệm đồng ý cho mượn sau khi xem xét hồ sơ.';if(p.approved===true)reserve(s,r,now);else{r.status='rejected';notice(s,r,'Đơn bị từ chối: '+r.boardNote,now)}}
  else if(action==='handover'){need(['staff'],['ready']);if(Date.parse(r.start)>now)fail('Chưa đến thời gian nhận thiết bị.');if(Date.parse(r.end)<=now)fail('Lịch mượn đã kết thúc. Cần tạo lịch mới.');if(!text(p.note)||p.checked!==true)fail('Xác nhận kiểm tra thiết bị và ghi tình trạng, phụ kiện trước giao.');r.handoverNote=text(p.note);r.status='handover'}
  else if(action==='sign'){need(['borrower'],['handover']);if(Date.parse(r.start)>now||Date.parse(r.end)<=now)fail('Đã ngoài thời gian nhận thiết bị. Vui lòng liên hệ phụ trách để điều chỉnh lịch.');if(p.confirmed!==true)fail('Cần xác nhận đã nhận đúng thiết bị và phụ kiện.');r.signature=r.name;r.signedAt=now;r.status='borrowed'}
- else if(action==='return'){need(['staff'],['borrowed']);if(p.checked!==true)fail('Cần đối chiếu và kiểm tra từng thiết bị.');if(!text(p.note))fail('Nhập kết quả kiểm tra khi trả.');r.returnNote=text(p.note);r.returnedAt=now;
+ else if(action==='requestEarlyReturn'){
+  need(['borrower'],['borrowed']);
+  if(!r.signedAt)fail('Thiết bị chưa được ký nhận.');
+  if(now>=Date.parse(r.end))fail('Đơn đã đến hạn trả. Vui lòng trả thiết bị theo quy trình thông thường.');
+  if(r.earlyReturnRequestedAt)fail('Bạn đã gửi yêu cầu trả trước hạn. Vui lòng chờ phụ trách tiếp nhận.');
+  if(p.confirmed!==true)fail('Cần xác nhận yêu cầu trả thiết bị trước hạn.');
+  r.earlyReturnRequestedAt=now;
+  r.earlyReturnNote=text(p.note,500);
+  s.notices.unshift({id:crypto.randomUUID(),requestId:r.id,to:'staff',body:'Người mượn '+r.name+' đề nghị trả thiết bị trước hạn cho đơn '+r.id+'. Hạn trả ban đầu: '+new Date(r.end).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'})+'. Vui lòng kiểm tra thiết bị và ghi nhận trả thực tế.',at:new Date(now).toISOString(),channel:'in-app'});
+  notice(s,r,'Đã gửi đề nghị trả trước hạn. Phụ trách thiết bị sẽ kiểm tra và xác nhận khi nhận lại thiết bị.',now);
+  log(s,role,r.id,'Đề nghị trả thiết bị trước hạn',now);
+ }
+ else if(action==='return'){need(['staff'],['borrowed']);if(p.checked!==true)fail('Cần đối chiếu và kiểm tra từng thiết bị.');if(!text(p.note))fail('Nhập kết quả kiểm tra khi trả.');r.returnNote=text(p.note);r.returnedAt=now;r.returnedEarly=now<Date.parse(r.end);
   if(!Array.isArray(p.damage))fail('Danh sách thiết bị hỏng/mất không hợp lệ.');
   for(const d of p.damage){const item=r.items.find((i:any)=>i.id===d.id);if(!item||!Number.isSafeInteger(d.qty)||d.qty<1||d.qty>item.qty)fail('Số lượng hỏng/mất vượt số đã mượn.');}if(new Set(p.damage.map((d:any)=>d.id)).size!==p.damage.length)fail('Mã hỏng/mất trùng.');
   r.damage=p.damage.map((d:any)=>({id:d.id,qty:d.qty}));for(const d of r.damage)s.equipment.find(e=>e.id===d.id).unusable+=d.qty;
