@@ -20,7 +20,7 @@ export function validate(s:State,p:any,now=Date.now()){
  if(!text(p.name)||!text(p.contact)||!text(p.purpose)||!text(p.start)||!text(p.end)) fail('Vui lòng điền đủ tên, liên hệ, mục đích và thời gian.');
  if(!Number.isFinite(Date.parse(p.start))||!Number.isFinite(Date.parse(p.end))||Date.parse(p.end)<=Date.parse(p.start))fail('Hạn trả phải sau thời gian nhận.');
  if(Date.parse(p.start)<now-60000)fail('Thời gian nhận phải từ hiện tại trở đi.');
- if(p.phone&&(!/^\+?[0-9 .()-]{9,20}$/.test(String(p.phone).trim())))fail('Số điện thoại không hợp lệ.');
+ if(!text(p.phone))fail('Vui lòng nhập số điện thoại liên hệ.');if(!/^\+?[0-9 .()-]{9,20}$/.test(String(p.phone).trim()))fail('Số điện thoại không hợp lệ.');
  if(!Array.isArray(p.items)||p.items.length===0||p.items.length>30)fail('Chọn ít nhất một thiết bị.');
  const ids=new Set();for(const i of p.items){if(ids.has(i.id))fail('Mỗi mã thiết bị chỉ được xuất hiện một lần.');ids.add(i.id);if(!s.equipment.some(e=>e.id===i.id)||!Number.isSafeInteger(i.qty)||i.qty<=0)fail('Mã thiết bị hoặc số lượng không hợp lệ.');}
 }
@@ -30,14 +30,14 @@ function reserve(s:State,r:any,now:number){if(r.items.some((i:any)=>available(s,
 export function route(s:State,r:any,now:number){if(r.items.some((i:any)=>available(s,i.id,r.start,r.end,r.id)<i.qty)){r.status='unavailable';notice(s,r,'Không đủ thiết bị theo lịch mượn.',now);return}
  const value=r.items.reduce((n:number,i:any)=>n+s.equipment.find(e=>e.id===i.id).value*i.qty,0);
  r.totalValue=value;
- if(s.settings.highValue===null || Date.parse(r.end)-Date.parse(r.start)>86400000 || value>=s.settings.highValue){r.status='board';r.boardAt=now;r.routingReason=s.settings.highValue===null?'Chờ Ban chủ nhiệm phê duyệt do CLB chưa quy định mức giá trị cần duyệt.':'Giá trị cao hoặc thời gian mượn trên một ngày.'}else reserve(s,r,now);
+ if(s.settings.highValue===null || Date.parse(r.end)-Date.parse(r.start)>=86400000 || value>=s.settings.highValue){r.status='board';r.boardAt=now;r.routingReason=s.settings.highValue===null?'Chờ Ban chủ nhiệm phê duyệt do CLB chưa quy định mức giá trị cần duyệt.':'Giá trị cao hoặc thời gian mượn trên một ngày.'}else reserve(s,r,now);
 }
 export function mutate(input:State,role:Role,action:string,p:any,now=Date.now()):State{
  const s=structuredClone(input);const r=s.requests.find(r=>r.id===p.id);
  if(isApprovalOverdue(r,now))fail('Đơn đã quá thời gian nhận nhưng chưa được duyệt. Chỉ được xem, không thể xử lý.');
  const need=(allowed:Role[],statuses?:string[])=>{if(!allowed.includes(role))fail('Vai trò này không được thực hiện hành động.');if(statuses&&(!r||!statuses.includes(r.status)))fail('Trạng thái đã thay đổi hoặc không phù hợp. Hãy tải lại dữ liệu.');};
  if(action==='demo'){need(['staff']);if(s.equipment.length||s.requests.length)fail('Chỉ nạp dữ liệu mẫu khi danh mục và hồ sơ trống.');s.equipment=[['TB001','Loa kéo','Âm thanh',4,3500000,'speaker'],['TB002','Micro không dây','Âm thanh',8,800000,'mic'],['TB003','Máy chiếu','Trình chiếu',2,12000000,'projector'],['TB004','Chân máy ảnh','Phụ kiện',5,450000,'tripod'],['TB005','Máy ảnh','Ghi hình',2,15000000,'camera'],['TB006','Dây nối điện','Phụ kiện',10,150000,'cable']].map(([id,name,category,total,value,icon])=>({id,name,category,total,value,icon,unusable:0}));log(s,role,'','Nạp danh mục giả lập để demo; không phải dữ liệu khảo sát.',now);return s;}
- if(action==='equipment'){need(['staff']);const id=text(p.code,40);if(!/^[A-Za-z0-9_-]{2,40}$/.test(id)||!text(p.name)||!Number.isSafeInteger(p.total)||p.total<1||!Number.isFinite(p.value)||p.value<0)fail('Kiểm tra mã, tên, số lượng nguyên dương và giá trị không âm.');if(s.equipment.some(e=>e.id===id))fail('Mã thiết bị đã tồn tại.');s.equipment.push({id,name:text(p.name,120),category:text(p.category,60)||'Khác',total:p.total,value:p.value,unusable:0,icon:'box'});log(s,role,id,'Thêm thiết bị',now);return s;}
+ if(action==='equipment'){need(['staff','board']);const id=text(p.code,40);if(!/^[A-Za-z0-9_-]{2,40}$/.test(id)||!text(p.name)||!Number.isSafeInteger(p.total)||p.total<1||!Number.isFinite(p.value)||p.value<0)fail('Kiểm tra mã, tên, số lượng nguyên dương và giá trị không âm.');if(s.equipment.some(e=>e.id===id))fail('Mã thiết bị đã tồn tại.');s.equipment.push({id,name:text(p.name,120),category:text(p.category,60)||'Khác',total:p.total,value:p.value,unusable:0,icon:'box'});log(s,role,id,'Thêm thiết bị',now);return s;}
  if(action==='updateEquipment'){
   need(['staff','board']);
   const e=s.equipment.find(e=>e.id===p.id);
@@ -100,12 +100,12 @@ export function mutate(input:State,role:Role,action:string,p:any,now=Date.now())
  }
  if(action==='review'){need(['staff'],['review']);if(Date.parse(r.end)<=now)fail('Lịch mượn đã kết thúc. Người mượn cần tạo đơn với thời gian mới.');if(p.valid===false){if(!text(p.note))fail('Nhập thông tin cần bổ sung.');r.status='supplement';r.note=text(p.note);r.supplementUntil=now+86400000;notice(s,r,r.note+' — vui lòng bổ sung trong 24 giờ.',now)}else{r.reviewNote='Đã kiểm tra và xác nhận thông tin hợp lệ.';route(s,r,now)}}
  else if(action==='approve'){need(['board'],['board']);if(Date.parse(r.end)<=now)fail('Lịch mượn đã kết thúc. Không thể duyệt đơn quá hạn.');if(typeof p.approved!=='boolean')fail('Chọn đồng ý hoặc từ chối đơn.');if(p.approved===false&&!text(p.note))fail('Nhập lý do từ chối đơn.');r.boardNote=text(p.note)||'Ban chủ nhiệm đồng ý cho mượn sau khi xem xét hồ sơ.';if(p.approved===true)reserve(s,r,now);else{r.status='rejected';notice(s,r,'Đơn bị từ chối: '+r.boardNote,now)}}
- else if(action==='handover'){need(['staff'],['ready']);if(Date.parse(r.start)>now)fail('Chưa đến thời gian nhận thiết bị.');if(Date.parse(r.end)<=now)fail('Lịch mượn đã kết thúc. Cần tạo lịch mới.');if(!text(p.note)||p.checked!==true)fail('Xác nhận kiểm tra thiết bị và ghi tình trạng, phụ kiện trước giao.');r.handoverNote=text(p.note);r.status='handover'}
- else if(action==='sign'){need(['borrower'],['handover']);if(Date.parse(r.start)>now||Date.parse(r.end)<=now)fail('Đã ngoài thời gian nhận thiết bị. Vui lòng liên hệ phụ trách để điều chỉnh lịch.');if(p.confirmed!==true)fail('Cần xác nhận đã nhận đúng thiết bị và phụ kiện.');r.signature=r.name;r.signedAt=now;r.status='borrowed'}
+ else if(action==='handover'){need(['staff'],['ready']);if(!text(p.note)||p.checked!==true)fail('Xác nhận kiểm tra thiết bị và ghi tình trạng, phụ kiện trước giao.');r.handoverNote=text(p.note);r.status='handover'}
+ else if(action==='sign'){need(['borrower'],['handover']);if(p.confirmed!==true)fail('Cần xác nhận đã nhận đúng thiết bị và phụ kiện.');r.signature=r.name;r.signedAt=now;r.status='borrowed'}
  else if(action==='requestEarlyReturn'){
   need(['borrower'],['borrowed']);
   if(!r.signedAt)fail('Thiết bị chưa được ký nhận.');
-  if(now>=Date.parse(r.end))fail('Đơn đã đến hạn trả. Vui lòng trả thiết bị theo quy trình thông thường.');
+  
   if(r.earlyReturnRequestedAt)fail('Bạn đã gửi yêu cầu trả trước hạn. Vui lòng chờ phụ trách tiếp nhận.');
   if(p.confirmed!==true)fail('Cần xác nhận yêu cầu trả thiết bị trước hạn.');
   r.earlyReturnRequestedAt=now;
