@@ -21,7 +21,7 @@ test('only newly created human actions are attributed, never reassigned old acti
 });
 test('board approval accepts an optional note but rejects missing rejection reasons, invalid decisions and wrong roles',()=>{
  const now=Date.now();let s=mutate(emptyState(),'staff','demo',{},now);
- s=mutate(s,'borrower','create',{name:'Member',contact:'member@example.com',purpose:'Sinh hoạt CLB',start:new Date(now+3600000).toISOString(),end:new Date(now+7200000).toISOString(),items:[{id:'TB001',qty:1}]},now);
+ s=mutate(s,'borrower','create',{name:'Member',contact:'member@example.com',phone:'0901234567',purpose:'Sinh hoạt CLB',start:new Date(now+3600000).toISOString(),end:new Date(now+7200000).toISOString(),items:[{id:'TB001',qty:1}]},now);
  const id=s.requests[0].id;s=mutate(s,'staff','review',{id,valid:true},now);
  const approved=mutate(s,'board','approve',{id,approved:true,note:''},now);
  assert.equal(approved.requests[0].status,'ready');assert.ok(approved.requests[0].boardNote);
