@@ -1315,3 +1315,45 @@ aside .nav-label{margin-top:8px}
 
 /* Requests awaiting approval past their scheduled pickup are read-only. */
 .badge.overdue{background:#f9e2d7;color:#8c2b13;border-color:#e9b6a4;font-weight:800}
+
+
+/* Registration email verification: strict vertical hierarchy on desktop and mobile. */
+.registration-email-verify{
+ display:flex!important;
+ flex-direction:column!important;
+ align-items:stretch!important;
+ gap:10px!important;
+ box-sizing:border-box;
+ padding:16px!important;
+}
+.registration-email-verify .email-verify-send{
+ display:inline-flex!important;
+ align-self:flex-start!important;
+ width:auto!important;
+ max-width:100%;
+ justify-content:center;
+ box-sizing:border-box;
+ margin:0!important;
+}
+.registration-email-verify .email-verify-success{
+ display:block;
+ width:100%;
+ margin:0!important;
+ color:#617266;
+ font-size:12px;
+ line-height:1.55;
+ text-align:left;
+}
+.registration-email-verify>label{
+ display:block!important;
+ width:100%;
+ margin:1px 0 0!important;
+}
+.registration-email-verify>label input{width:100%;box-sizing:border-box}
+@media(max-width:480px){
+ .registration-email-verify{padding:12px!important;gap:9px!important}
+ .registration-email-verify .email-verify-send{font-size:13px;white-space:normal;text-align:center}
+}
+/* One remaining setting panel uses the space without empty second column. */
+.settings-grid{grid-template-columns:minmax(0,1fr)!important;gap:0!important;max-width:100%}
+.settings-grid>.setting{width:100%;box-sizing:border-box;min-width:0}
