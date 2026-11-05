@@ -47,7 +47,16 @@ export async function accountEndpoint(env:any,req:Request,fetcher:typeof fetch=f
   try{await env.DB.batch([env.DB.prepare('INSERT INTO workspaces(id,version,data) VALUES(?,0,?)').bind('account:'+email,JSON.stringify(a)),session])}
   catch{if(await read(env.DB,'account:'+email))return reply({error:'Email đã có tài khoản. Hãy đăng nhập bằng mật khẩu đã đăng ký.',code:'ACCOUNT_EXISTS'},409);return reply({error:'Chưa tạo được tài khoản. Vui lòng thử lại.',code:'REGISTRATION_FAILED'},503)}
  }else{
+  // Atomic per-email throttle also applies to non-existent accounts.
+  // This prevents unlimited online password guesses without exposing account existence.
+  const now=Date.now();
+  const throttle=await env.DB.prepare(
+   "INSERT INTO workspaces(id,version,data) VALUES(?,0,?) "+
+   "ON CONFLICT(id) DO UPDATE SET data=json_object('at', ?, 'count', CASE WHEN CAST(json_extract(workspaces.data,'$.at') AS INTEGER) > ? THEN COALESCE(CAST(json_extract(workspaces.data,'$.count') AS INTEGER),0)+1 ELSE 1 END),version=version+1 RETURNING data"
+  ).bind('login-limit:'+await digest(email),JSON.stringify({at:now,count:1}),now,now-60000).first();
+  if(!throttle||JSON.parse(throttle.data).count>10)return reply({error:'Quá nhiều lần đăng nhập trong một phút. Vui lòng thử lại sau.'},429);
   if(!a||await passwordHash(password,a.salt)!==a.hash)return reply({error:'Email hoặc mật khẩu không đúng.'},401);
+  await env.DB.prepare('DELETE FROM workspaces WHERE id=?').bind('login-limit:'+await digest(email)).run();
   await session.run();
  }
  return reply({ok:true,user:{email:a.email,name:a.name,role:a.role,emailVerified:a.emailVerified===true}},200,`suctre_session=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=86400`);
