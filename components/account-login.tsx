@@ -2,7 +2,7 @@
 import {useState,useEffect} from 'react';
 import PasswordReset from './password-reset';
 export default function AccountLogin({onLogin}:{onLogin:(user:any)=>void}){
- const [reset,setReset]=useState<string|null>(null);useEffect(()=>{const token=new URLSearchParams(window.location.hash.slice(1)).get('reset');if(token){setReset(token);history.replaceState(null,'',window.location.pathname+window.location.search)}},[]);
+ const [reset,setReset]=useState<string|null>(null);useEffect(()=>{const token=new URLSearchParams(window.location.search).get('reset')||new URLSearchParams(window.location.hash.slice(1)).get('reset');if(token){setReset(token);history.replaceState(null,'',window.location.pathname+window.location.search)}},[]);
  const [register,setRegister]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[form,setForm]=useState({email:'',password:'',name:'',role:'borrower',code:'',confirmPassword:'',verificationCode:''});
  const [sentCode,setSentCode]=useState(false);
  async function sendCode(){setBusy(true);setError('');try{const r=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'sendEmailCode',email:form.email})});const d:any=await r.json();if(!r.ok)throw new Error(d.error||'Không gửi được mã.');setSentCode(true)}catch(e:any){setError(e.message)}finally{setBusy(false)}}
