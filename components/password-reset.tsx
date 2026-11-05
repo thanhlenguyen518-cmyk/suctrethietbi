@@ -1,7 +1,7 @@
 'use client';
 import {useState} from 'react';
 
-export default function PasswordReset({token,onBack}:{token:string;onBack:()=>void}){
+export default function PasswordReset({token,onBack}:{token:string;onBack?:()=>void}){
  const [email,setEmail]=useState('');
  const [password,setPassword]=useState('');
  const [confirmPassword,setConfirm]=useState('');
@@ -44,10 +44,10 @@ export default function PasswordReset({token,onBack}:{token:string;onBack:()=>vo
       <input required type={visible?'text':'password'} minLength={10} maxLength={128} autoComplete="new-password"
        value={confirmPassword} onChange={e=>{setConfirm(e.target.value);setError('')}}/>
      </label>
-     <button type="button" className="secondary" onClick={()=>setVisible(v=>!v)}
-      aria-pressed={visible} style={{width:'100%',minHeight:44,display:'block'}}>
-      {visible?'Ẩn mật khẩu':'Hiện mật khẩu'}
-     </button>
+     <label className="reset-show-password">
+      <input type="checkbox" checked={visible} onChange={e=>setVisible(e.target.checked)}/>
+      <span>Hiện mật khẩu</span>
+     </label>
      {mismatch&&<p role="alert" style={{color:'#9b2d12',margin:0}}>Hai mật khẩu chưa trùng khớp.</p>}
      {password.length>0&&!passwordLengthOk&&<p style={{color:'#7b5116',margin:0}}>Cần từ 10 đến 128 ký tự.</p>}
     </>:<label>Email đã đăng ký
@@ -58,7 +58,7 @@ export default function PasswordReset({token,onBack}:{token:string;onBack:()=>vo
     <button type="submit" className="primary" disabled={!canSubmit}>
      {busy?'Đang xử lý…':isReset?'Lưu mật khẩu mới':'Gửi liên kết đặt lại'}
     </button>
-    <button type="button" className="secondary" onClick={onBack}>Về đăng nhập</button>
+    <button type="button" className="secondary" onClick={()=>onBack?onBack():window.location.assign("/")}>Về đăng nhập</button>
    </form>
   </section>
  </main>;
