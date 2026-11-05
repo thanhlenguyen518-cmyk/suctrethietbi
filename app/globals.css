@@ -1357,3 +1357,37 @@ aside .nav-label{margin-top:8px}
 /* One remaining setting panel uses the space without empty second column. */
 .settings-grid{grid-template-columns:minmax(0,1fr)!important;gap:0!important;max-width:100%}
 .settings-grid>.setting{width:100%;box-sizing:border-box;min-width:0}
+
+/* The homepage hero is a single full-width illustration, without a text column. */
+.story-cover.story-cover-full-image{
+ display:block!important;
+ width:100%;
+ height:auto!important;
+ min-height:0!important;
+ max-height:none!important;
+ aspect-ratio:3 / 1;
+ overflow:hidden;
+ border-radius:18px;
+ background:#102835;
+}
+.story-cover.story-cover-full-image>img{
+ display:block;
+ width:100%;
+ height:100%;
+ object-fit:cover;
+ object-position:center center;
+}
+@media(max-width:760px){
+ .story-cover.story-cover-full-image{
+  display:block!important;
+  height:auto!important;
+  min-height:0!important;
+  max-height:none!important;
+  aspect-ratio:3 / 1;
+ }
+ .story-cover.story-cover-full-image>img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+ }
+}
