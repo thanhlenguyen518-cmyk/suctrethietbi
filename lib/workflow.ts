@@ -31,7 +31,7 @@ export function mutate(input:State,role:Role,action:string,p:any,now=Date.now())
  if(action==='demo'){need(['staff']);if(s.equipment.length||s.requests.length)fail('Chỉ nạp dữ liệu mẫu khi danh mục và hồ sơ trống.');s.equipment=[['TB001','Loa kéo','Âm thanh',4,3500000,'speaker'],['TB002','Micro không dây','Âm thanh',8,800000,'mic'],['TB003','Máy chiếu','Trình chiếu',2,12000000,'projector'],['TB004','Chân máy ảnh','Phụ kiện',5,450000,'tripod'],['TB005','Máy ảnh','Ghi hình',2,15000000,'camera'],['TB006','Dây nối điện','Phụ kiện',10,150000,'cable']].map(([id,name,category,total,value,icon])=>({id,name,category,total,value,icon,unusable:0}));log(s,role,'','Nạp danh mục giả lập để demo; không phải dữ liệu khảo sát.',now);return s;}
  if(action==='equipment'){need(['staff']);const id=text(p.code,40);if(!/^[A-Za-z0-9_-]{2,40}$/.test(id)||!text(p.name)||!Number.isSafeInteger(p.total)||p.total<1||!Number.isFinite(p.value)||p.value<0)fail('Kiểm tra mã, tên, số lượng nguyên dương và giá trị không âm.');if(s.equipment.some(e=>e.id===id))fail('Mã thiết bị đã tồn tại.');s.equipment.push({id,name:text(p.name,120),category:text(p.category,60)||'Khác',total:p.total,value:p.value,unusable:0,icon:'box'});log(s,role,id,'Thêm thiết bị',now);return s;}
  if(action==='updateEquipment'){
-  need(['staff']);
+  need(['staff','board']);
   const e=s.equipment.find(e=>e.id===p.id);
   if(!e)fail('Không tìm thấy thiết bị cần chỉnh sửa.');
   const name=text(p.name,120),category=text(p.category,60)||'Khác';
