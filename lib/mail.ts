@@ -47,6 +47,10 @@ export async function sendTransactionalEmail(env:any,to:string,subject:string,bo
  if(typeof data?.id!=='string'||!data.id)throw new Error('Dịch vụ email không trả mã xác nhận.');
  return data.id;
 }
+export async function sendActivityEmail(env:any,notice:any,fetcher:Fetcher=fetch){
+ if(notice.type!=='activity'||typeof notice.subject!=='string'||typeof notice.body!=='string')throw new Error('Thông báo hoạt động không hợp lệ.');
+ return sendTransactionalEmail(env,notice.to,notice.subject,notice.body,'suctre-event-'+notice.id,fetcher);
+}
 export async function sendEmail(env:any,notice:any,fetcher:Fetcher=fetch){
  return sendTransactionalEmail(env,notice.to,'CLB Sức Trẻ — Nhắc trả thiết bị '+notice.requestId,notice.body,'suctre-'+notice.id,fetcher);
 }
