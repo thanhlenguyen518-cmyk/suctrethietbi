@@ -26,7 +26,16 @@ const worker = {
         headers.set('x-suctre-name',encodeURIComponent(account.name));
         if(url.pathname==='/api/photos'&&request.method==='POST'&&account.role!=='staff')return Response.json({error:'Chỉ phụ trách thiết bị được tải ảnh.'},{status:403});
       }
-      return handler.fetch(new Request(request,{headers}),env,ctx);
+      const response=await handler.fetch(new Request(request,{headers}),env,ctx);
+      // Trigger the persistent email outbox immediately after a successful workflow
+      // change. Cron remains a fallback for transient email-provider failures.
+      // Never delay or roll back a saved workflow because Gmail is unavailable.
+      if(url.pathname==='/api/state'&&request.method==='POST'&&response.ok){
+        ctx.waitUntil(runMaintenance(env).catch(error=>{
+          console.error('Suctre activity mail processing failed:',String(error?.message||error).slice(0,300));
+        }));
+      }
+      return response;
     }
     let binding = ctx.props?.CONNECTORS;
     // Local preview emulates the same request-scoped capability. This branch and
