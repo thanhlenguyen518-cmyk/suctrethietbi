@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {mutate, available} from '../lib/workflow.ts';
-import {borrowedQuantity,visibleNotices} from '../lib/visibility.ts';
+import {borrowedQuantity,reservedQuantity,visibleNotices} from '../lib/visibility.ts';
 
 const now=Date.parse('2026-11-05T08:00:00.000Z');
 const start=new Date(now+60*60*1000).toISOString();
@@ -67,4 +67,22 @@ test('Outstanding repayment can be reported without closing debt early',()=>{
  const s=state('debt_plan');s.requests[0].amount=100000;s.requests[0].paid=20000;
  const out=mutate(s,'borrower','reportPayment',{id:'MT-001',note:'Chuyển khoản đợt hai'},now);
  assert.equal(out.requests[0].status,'payment_review');
+});
+
+test('Reserved equipment is separate from actively borrowed equipment',()=>{
+ const requests=[
+  {status:'ready',items:[{id:'TB001',qty:2}]},
+  {status:'handover',items:[{id:'TB002',qty:1}]},
+  {status:'borrowed',items:[{id:'TB003',qty:4}]},
+  {status:'closed',items:[{id:'TB004',qty:6}]}
+ ];
+ assert.equal(reservedQuantity(requests),3);
+ assert.equal(borrowedQuantity(requests),4);
+});
+test('Distinct borrowers can create requests without reusing the same submission identity',()=>{
+ const base=state();base.requests=[];
+ const first=mutate(base,'borrower','create',{name:'Người A',contact:'a@example.com',purpose:'Sinh hoạt CLB',start,end,items:[{id:'TB001',qty:1}],submissionId:'11111111-1111-4111-8111-111111111111'},now);
+ const second=mutate(first,'borrower','create',{name:'Người B',contact:'b@example.com',purpose:'Sinh hoạt CLB',start,end,items:[{id:'TB001',qty:1}],submissionId:'22222222-2222-4222-8222-222222222222'},now);
+ assert.equal(second.requests.length,2);
+ assert.notEqual(second.requests[0].submissionId,second.requests[1].submissionId);
 });
