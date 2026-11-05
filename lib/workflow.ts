@@ -1,6 +1,13 @@
 export type Role='borrower'|'staff'|'board';
 export type State={equipment:any[],requests:any[],logs:any[],notices:any[],settings:{highValue:number|null,autoCheck?:boolean,autoReminders?:boolean,emailEnabled?:boolean,calibration?:any[],lastJob?:any},version?:number};
-export const labels:Record<string,string>={cancelled:'Đã hủy',review:'Chờ kiểm tra',supplement:'Cần bổ sung',board:'Chờ Ban chủ nhiệm',ready:'Đã giữ thiết bị',handover:'Chờ ký nhận',borrowed:'Đang mượn',incident:'Chờ duyệt biên bản',compensation:'Chờ duyệt bồi thường',payment:'Chờ bồi thường',payment_review:'Chờ đối chiếu bồi thường',debt_plan:'Chờ xử lý khoản còn thiếu',closed:'Hoàn tất',rejected:'Từ chối',unavailable:'Không đủ thiết bị',expired:'Hết hạn bổ sung'};
+export const labels:Record<string,string>={cancelled:'Đã hủy',review:'Chờ kiểm tra',supplement:'Cần bổ sung',board:'Chờ Ban chủ nhiệm',ready:'Đã giữ thiết bị',handover:'Chờ ký nhận',borrowed:'Đang mượn',incident:'Chờ duyệt biên bản',compensation:'Chờ duyệt bồi thường',payment:'Chờ bồi thường',payment_review:'Chờ đối chiếu bồi thường',debt_plan:'Chờ xử lý khoản còn thiếu',closed:'Hoàn tất',rejected:'Từ chối',unavailable:'Không đủ thiết bị',expired:'Hết hạn bổ sung',overdue:'Quá hạn duyệt'};
+/** An unapproved request becomes read-only as soon as its planned pickup begins. */
+export function isApprovalOverdue(r:any,now=Date.now()):boolean{
+ return !!r&&['review','supplement','board'].includes(r.status)&&Number.isFinite(Date.parse(r.start))&&Date.parse(r.start)<=now;
+}
+export function displayStatus(r:any,now=Date.now()):string{
+ return isApprovalOverdue(r,now)?'overdue':r.status;
+}
 export const emptyState=():State=>({equipment:[],requests:[],logs:[],notices:[],settings:{highValue:null}});
 const fail=(s:string):never=>{throw new Error(s)};
 const text=(x:any,max=3000)=>typeof x==='string'?x.trim().slice(0,max):'';
@@ -27,6 +34,7 @@ export function route(s:State,r:any,now:number){if(r.items.some((i:any)=>availab
 }
 export function mutate(input:State,role:Role,action:string,p:any,now=Date.now()):State{
  const s=structuredClone(input);const r=s.requests.find(r=>r.id===p.id);
+ if(isApprovalOverdue(r,now))fail('Đơn đã quá thời gian nhận nhưng chưa được duyệt. Chỉ được xem, không thể xử lý.');
  const need=(allowed:Role[],statuses?:string[])=>{if(!allowed.includes(role))fail('Vai trò này không được thực hiện hành động.');if(statuses&&(!r||!statuses.includes(r.status)))fail('Trạng thái đã thay đổi hoặc không phù hợp. Hãy tải lại dữ liệu.');};
  if(action==='demo'){need(['staff']);if(s.equipment.length||s.requests.length)fail('Chỉ nạp dữ liệu mẫu khi danh mục và hồ sơ trống.');s.equipment=[['TB001','Loa kéo','Âm thanh',4,3500000,'speaker'],['TB002','Micro không dây','Âm thanh',8,800000,'mic'],['TB003','Máy chiếu','Trình chiếu',2,12000000,'projector'],['TB004','Chân máy ảnh','Phụ kiện',5,450000,'tripod'],['TB005','Máy ảnh','Ghi hình',2,15000000,'camera'],['TB006','Dây nối điện','Phụ kiện',10,150000,'cable']].map(([id,name,category,total,value,icon])=>({id,name,category,total,value,icon,unusable:0}));log(s,role,'','Nạp danh mục giả lập để demo; không phải dữ liệu khảo sát.',now);return s;}
  if(action==='equipment'){need(['staff']);const id=text(p.code,40);if(!/^[A-Za-z0-9_-]{2,40}$/.test(id)||!text(p.name)||!Number.isSafeInteger(p.total)||p.total<1||!Number.isFinite(p.value)||p.value<0)fail('Kiểm tra mã, tên, số lượng nguyên dương và giá trị không âm.');if(s.equipment.some(e=>e.id===id))fail('Mã thiết bị đã tồn tại.');s.equipment.push({id,name:text(p.name,120),category:text(p.category,60)||'Khác',total:p.total,value:p.value,unusable:0,icon:'box'});log(s,role,id,'Thêm thiết bị',now);return s;}
