@@ -1246,3 +1246,69 @@ aside .nav-label{margin-top:8px}
  .stats .stat strong{font-size:27px;line-height:1.1}
  .stats .stat small{display:block;margin:4px 0 0;font-size:10px;line-height:1.25}
 }
+
+
+/* Club equipment illustrations: compact hand-painted doodles and usable detail action. */
+.equipment-visual{
+ display:flex;
+ align-items:center;
+ justify-content:center;
+ padding:13px;
+ min-height:164px;
+ box-sizing:border-box;
+ overflow:hidden;
+ background:#e8ead8;
+}
+.equipment-visual .equipment-doodle{
+ display:block;
+ width:min(100%,180px);
+ height:145px;
+ flex-shrink:0;
+ filter:drop-shadow(0 3px 1px rgba(56,77,68,.06));
+}
+.equipment-visual>span{display:none!important}
+.equipment-visual.camera{background:#e7ebdb}
+.equipment-visual.mic{background:#f5efd9}
+.equipment-visual.speaker{background:#e0e9e4}
+.equipment-visual.projector{background:#e7e5da}
+.equipment-visual.tripod{background:#eceddf}
+.equipment-visual.cable{background:#e6ece5}
+.equipment-visual.laptop{background:#e8e7df}
+.equipment-visual.light{background:#f4efd9}
+.equipment-visual.screen{background:#e5eae6}
+.equipment-visual.walkie{background:#e6e9d7}
+.equipment-view-detail{
+ display:inline-flex;
+ align-items:center;
+ justify-content:center;
+ gap:6px;
+ min-height:38px;
+ padding:7px 10px;
+ border:1px solid #c7d1b9;
+ border-radius:10px;
+ background:#eef0df;
+ color:#183138;
+ font-size:12px;
+ font-family:var(--font-interface),sans-serif;
+ font-weight:750;
+ white-space:nowrap;
+ cursor:pointer;
+}
+.equipment-view-detail:hover,.equipment-view-detail:focus-visible{background:#e0e7ce;border-color:#9fb094}
+.equipment-detail-layout{display:grid;grid-template-columns:minmax(140px,190px) minmax(0,1fr);gap:20px;align-items:start}
+.equipment-detail-art{border-radius:18px;background:#e7ebdb;display:grid;place-items:center;min-height:195px}
+.equipment-detail-art .equipment-doodle{width:100%;max-width:185px;height:auto}
+.equipment-detail-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.equipment-detail-fields p{padding:10px 12px;border-radius:11px;background:#f8f5e9;margin:0;min-width:0}
+.equipment-detail-fields small{display:block;font-size:11px;color:#5a685e;margin-bottom:5px}
+.equipment-detail-fields strong{font-size:14px;line-height:1.4;overflow-wrap:anywhere}
+@media(max-width:650px){
+ .equipment-visual{min-height:135px;padding:8px}
+ .equipment-visual .equipment-doodle{height:125px;width:min(100%,145px)}
+ .equipment-detail-layout{grid-template-columns:1fr;gap:12px}
+ .equipment-detail-art{min-height:155px}
+ .equipment-detail-art .equipment-doodle{max-width:155px}
+ .equipment-detail-fields{gap:7px}
+ .equipment-detail-fields p{padding:8px}
+ .equipment-view-detail{font-size:11px;min-height:38px}
+}
