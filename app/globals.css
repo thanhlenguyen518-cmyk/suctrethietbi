@@ -1016,3 +1016,47 @@ aside .nav-label{margin-top:8px}
   }
   aside .nav-label{margin-top:0}
 }
+
+
+/* Wide hand-lettered cover. Preserve all lettering; no dark letterbox bars. */
+.story-cover{
+  grid-template-columns:minmax(330px, 46%) minmax(0, 1fr);
+  height:214px;
+  min-height:214px;
+  max-height:214px;
+}
+.story-cover-illustration{
+  display:block;
+  width:100%;
+  height:214px;
+  min-height:214px;
+  max-height:214px;
+  background:#122836;
+}
+.story-cover-illustration img{
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  object-position:center;
+}
+@media(max-width:760px){
+  .story-cover{
+    display:flex;
+    flex-direction:column;
+    height:auto;
+    min-height:0;
+    max-height:none;
+  }
+  .story-cover-illustration{
+    width:100%;
+    height:auto;
+    min-height:0;
+    max-height:none;
+    aspect-ratio:2/1;
+  }
+  .story-cover-illustration img{
+    object-fit:cover;
+    object-position:center;
+  }
+}
