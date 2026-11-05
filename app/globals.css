@@ -1490,3 +1490,26 @@ aside .nav-label{margin-top:8px}
 @media(max-width:760px){
  .story-cover.story-cover-full-image{width:100%!important}
 }
+
+/* Slim full-row banner: no white frame, no clipping, all artwork visible. */
+.story-cover.story-cover-full-image{
+ width:100%!important;
+ height:clamp(128px,14vw,205px)!important;
+ max-height:205px!important;
+ margin:0!important;
+ border:0!important;
+ border-radius:16px!important;
+ overflow:hidden!important;
+ background:transparent!important;
+}
+.story-cover.story-cover-full-image>img{
+ width:100%!important;
+ height:100%!important;
+ max-height:none!important;
+ object-fit:fill!important;
+ object-position:center!important;
+ display:block!important;
+}
+@media(max-width:760px){
+ .story-cover.story-cover-full-image{height:clamp(90px,21vw,150px)!important}
+}
