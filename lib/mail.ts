@@ -1,9 +1,17 @@
 type Fetcher=typeof fetch;
 const validEmail=(email:string)=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)&&email.length<=160;
-export function mailReady(env:any){
- if(env.EMAIL_PROVIDER==='gmail_script')return !!(env.GMAIL_SCRIPT_URL&&env.GMAIL_SCRIPT_SECRET);
- return !!(env.RESEND_API_KEY&&env.MAIL_FROM);
+/**
+ * Prefer Google Apps Script whenever both Gmail configuration values are present.
+ * This also supports older Cloudflare deployments that omitted EMAIL_PROVIDER.
+ * Explicit gmail_script settings never silently fall back to Resend.
+ */
+export function mailProvider(env:any):'gmail_script'|'resend'|null{
+ const gmail=!!(env.GMAIL_SCRIPT_URL&&env.GMAIL_SCRIPT_SECRET);
+ if(env.EMAIL_PROVIDER==='gmail_script')return gmail?'gmail_script':null;
+ if(gmail)return 'gmail_script';
+ return env.RESEND_API_KEY&&env.MAIL_FROM?'resend':null;
 }
+export function mailReady(env:any){return mailProvider(env)!==null;}
 /**
  * One server-only mail gateway for registration codes, password resets and reminders.
  * Google Apps Script mode uses a separate, secret-protected Apps Script deployment.
@@ -12,7 +20,7 @@ export function mailReady(env:any){
 export async function sendTransactionalEmail(env:any,to:string,subject:string,body:string,id:string,fetcher:Fetcher=fetch):Promise<string>{
  if(!validEmail(to))throw new Error('Địa chỉ email người nhận không hợp lệ.');
  if(!mailReady(env))throw new Error('Chưa cấu hình dịch vụ gửi email. Người quản lý cần hoàn tất thiết lập email.');
- if(env.EMAIL_PROVIDER==='gmail_script'){
+ if(mailProvider(env)==='gmail_script'){
   const url=new URL(String(env.GMAIL_SCRIPT_URL));
   if(url.protocol!=='https:'||url.hostname!=='script.google.com'||!/^\/macros\/s\/[^/]+\/exec$/.test(url.pathname)||url.search||url.hash)throw new Error('Địa chỉ Google Apps Script không hợp lệ.');
   const secret=String(env.GMAIL_SCRIPT_SECRET);
