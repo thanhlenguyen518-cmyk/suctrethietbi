@@ -1421,3 +1421,34 @@ aside .nav-label{margin-top:8px}
 @media(max-width:760px){
  .story-cover.story-cover-full-image{width:100%!important}
 }
+
+/* Google OAuth button: centered authentic four-color mark and clear label. */
+.google-signin-button{
+ display:flex!important;
+ align-items:center;
+ justify-content:center;
+ gap:11px;
+ width:100%;
+ min-height:52px;
+ padding:12px 18px;
+ margin-top:16px;
+ border:1px solid #414141;
+ border-radius:13px;
+ background:#303030;
+ color:#fff!important;
+ font-size:16px;
+ line-height:1.3;
+ font-weight:600;
+ text-align:center;
+ text-decoration:none!important;
+ cursor:pointer;
+ box-sizing:border-box;
+ transition:background .15s ease,box-shadow .15s ease;
+}
+.google-signin-button:hover:not(:disabled){background:#424242;box-shadow:0 2px 9px rgba(0,0,0,.13)}
+.google-signin-button:focus-visible{outline:3px solid #80a8ff;outline-offset:3px}
+.google-signin-button:disabled{opacity:.55;cursor:not-allowed}
+.google-signin-logo{display:block;flex:none;width:23px;height:23px}
+@media(max-width:480px){
+ .google-signin-button{min-height:50px;font-size:15px}
+}
