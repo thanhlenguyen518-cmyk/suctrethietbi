@@ -10,7 +10,7 @@ import {reportText,reminderText} from '../../../lib/ai-schema';
 import {imageInputs} from '../../../lib/evidence';
 import {mailReady} from '../../../lib/mail';
 import {personalLogs,attributeNewLogs} from '../../../lib/activity';
-import {borrowedQuantity,visibleNotices} from '../../../lib/visibility';
+import {borrowedQuantity,reservedQuantity,visibleNotices} from '../../../lib/visibility';
 function visibleState(s:any,req:Request){
  const result=publicState(s);
  const email=req.headers.get('x-suctre-account');
@@ -19,6 +19,7 @@ function visibleState(s:any,req:Request){
  const allRequests=result.requests;
  // Public inventory counts refer to all borrowers, not only the current user's records.
  result.activeBorrowedCount=borrowedQuantity(allRequests);
+ result.activeReservedCount=reservedQuantity(allRequests);
  if(role==='borrower'){
   result.requests=result.requests.filter((r:any)=>r.accountEmail===email);
   const ids=new Set<string>(result.requests.map((r:any)=>String(r.id)));
