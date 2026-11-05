@@ -11,12 +11,12 @@ const item={id:'TB001',qty:1};
 function state(status='ready'){
  return {equipment:[{...equipment}],requests:[{id:'MT-001',name:'A',contact:'a@example.com',start,end,items:[{...item}],status,createdAt:now}],logs:[],notices:[],settings:{highValue:null}};
 }
-test('Cannot hand over equipment before pickup time',()=>{
- assert.throws(()=>mutate(state(),'staff','handover',{id:'MT-001',note:'Đạt',checked:true},now),/Chưa đến thời gian nhận/);
+test('Staff can hand over equipment before scheduled pickup time',()=>{
+ assert.equal(mutate(state(),'staff','handover',{id:'MT-001',note:'Đạt',checked:true},now).requests[0].status,'handover');
 });
-test('Cannot sign after return deadline',()=>{
+test('Borrower can sign when equipment is handed over even after planned deadline',()=>{
  const s=state('handover');
- assert.throws(()=>mutate(s,'borrower','sign',{id:'MT-001',confirmed:true},now+4*60*60*1000),/ngoài thời gian nhận/);
+ assert.equal(mutate(s,'borrower','sign',{id:'MT-001',confirmed:true},now+4*60*60*1000).requests[0].status,'borrowed');
 });
 test('Reservation prevents double booking and is released on cancellation',()=>{
  const s=state('ready');
@@ -45,7 +45,7 @@ test('Debt plan does not close unpaid compensation',()=>{
 });
 test('Creation preserves idempotency token',()=>{
  const s=state();s.requests=[];
- const out=mutate(s,'borrower','create',{submissionId:'11111111-1111-4111-8111-111111111111',name:'A',contact:'a@example.com',purpose:'Họp CLB',start,end,items:[{...item}]},now);
+ const out=mutate(s,'borrower','create',{submissionId:'11111111-1111-4111-8111-111111111111',name:'A',contact:'a@example.com',phone:'0901234567',purpose:'Họp CLB',start,end,items:[{...item}]},now);
  assert.equal(out.requests[0].submissionId,'11111111-1111-4111-8111-111111111111');
 });
 
@@ -81,8 +81,8 @@ test('Reserved equipment is separate from actively borrowed equipment',()=>{
 });
 test('Distinct borrowers can create requests without reusing the same submission identity',()=>{
  const base=state();base.requests=[];
- const first=mutate(base,'borrower','create',{name:'Người A',contact:'a@example.com',purpose:'Sinh hoạt CLB',start,end,items:[{id:'TB001',qty:1}],submissionId:'11111111-1111-4111-8111-111111111111'},now);
- const second=mutate(first,'borrower','create',{name:'Người B',contact:'b@example.com',purpose:'Sinh hoạt CLB',start,end,items:[{id:'TB001',qty:1}],submissionId:'22222222-2222-4222-8222-222222222222'},now);
+ const first=mutate(base,'borrower','create',{name:'Người A',contact:'a@example.com',phone:'0901234567',purpose:'Sinh hoạt CLB',start,end,items:[{id:'TB001',qty:1}],submissionId:'11111111-1111-4111-8111-111111111111'},now);
+ const second=mutate(first,'borrower','create',{name:'Người B',contact:'b@example.com',phone:'0901234567',purpose:'Sinh hoạt CLB',start,end,items:[{id:'TB001',qty:1}],submissionId:'22222222-2222-4222-8222-222222222222'},now);
  assert.equal(second.requests.length,2);
  assert.notEqual(second.requests[0].submissionId,second.requests[1].submissionId);
 });
@@ -155,6 +155,6 @@ test('Early return is not self-confirmable and rejects invalid states',()=>{
  const t=now+90*60*1000;const v=state('borrowed');v.requests[0].signedAt=now+60*60*1000;
  assert.throws(()=>mutate(v,'borrower','requestEarlyReturn',{id:'MT-001',confirmed:false},t),/xác nhận/);
  assert.throws(()=>mutate(v,'board','requestEarlyReturn',{id:'MT-001',confirmed:true},t),/Vai trò/);
- assert.throws(()=>mutate(v,'borrower','requestEarlyReturn',{id:'MT-001',confirmed:true},Date.parse(end)),/đến hạn/);
+ assert.equal(mutate(v,'borrower','requestEarlyReturn',{id:'MT-001',confirmed:true},Date.parse(end)).requests[0].status,'borrowed');
  assert.throws(()=>mutate(state('ready'),'borrower','requestEarlyReturn',{id:'MT-001',confirmed:true},t),/Trạng thái/);
 });
