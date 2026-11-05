@@ -30,6 +30,31 @@ export function mutate(input:State,role:Role,action:string,p:any,now=Date.now())
  const need=(allowed:Role[],statuses?:string[])=>{if(!allowed.includes(role))fail('Vai trò này không được thực hiện hành động.');if(statuses&&(!r||!statuses.includes(r.status)))fail('Trạng thái đã thay đổi hoặc không phù hợp. Hãy tải lại dữ liệu.');};
  if(action==='demo'){need(['staff']);if(s.equipment.length||s.requests.length)fail('Chỉ nạp dữ liệu mẫu khi danh mục và hồ sơ trống.');s.equipment=[['TB001','Loa kéo','Âm thanh',4,3500000,'speaker'],['TB002','Micro không dây','Âm thanh',8,800000,'mic'],['TB003','Máy chiếu','Trình chiếu',2,12000000,'projector'],['TB004','Chân máy ảnh','Phụ kiện',5,450000,'tripod'],['TB005','Máy ảnh','Ghi hình',2,15000000,'camera'],['TB006','Dây nối điện','Phụ kiện',10,150000,'cable']].map(([id,name,category,total,value,icon])=>({id,name,category,total,value,icon,unusable:0}));log(s,role,'','Nạp danh mục giả lập để demo; không phải dữ liệu khảo sát.',now);return s;}
  if(action==='equipment'){need(['staff']);const id=text(p.code,40);if(!/^[A-Za-z0-9_-]{2,40}$/.test(id)||!text(p.name)||!Number.isSafeInteger(p.total)||p.total<1||!Number.isFinite(p.value)||p.value<0)fail('Kiểm tra mã, tên, số lượng nguyên dương và giá trị không âm.');if(s.equipment.some(e=>e.id===id))fail('Mã thiết bị đã tồn tại.');s.equipment.push({id,name:text(p.name,120),category:text(p.category,60)||'Khác',total:p.total,value:p.value,unusable:0,icon:'box'});log(s,role,id,'Thêm thiết bị',now);return s;}
+ if(action==='updateEquipment'){
+  need(['staff']);
+  const e=s.equipment.find(e=>e.id===p.id);
+  if(!e)fail('Không tìm thấy thiết bị cần chỉnh sửa.');
+  const name=text(p.name,120),category=text(p.category,60)||'Khác';
+  if(!name||!Number.isSafeInteger(p.total)||p.total<1||!Number.isSafeInteger(p.value)||p.value<0)fail('Tên, số lượng và giá trị thiết bị không hợp lệ.');
+  if(p.total<e.unusable)fail('Tổng số lượng không được nhỏ hơn số thiết bị hỏng hoặc mất.');
+  // Existing reservations and handovers must remain fulfilled after inventory edits.
+  const events:{time:number,delta:number}[]=[];
+  for(const req of s.requests.filter((q:any)=>['ready','handover','borrowed'].includes(q.status))){
+   const qty=(req.items||[]).filter((i:any)=>i.id===e.id).reduce((a:number,i:any)=>a+i.qty,0);
+   if(!qty)continue;
+   const start=Date.parse(req.start);
+   const end=req.status==='borrowed'?Number.POSITIVE_INFINITY:Date.parse(req.end);
+   if(!Number.isFinite(start)||(!Number.isFinite(end)&&end!==Infinity))continue;
+   events.push({time:start,delta:qty},{time:end,delta:-qty});
+  }
+  events.sort((a,b)=>a.time-b.time||a.delta-b.delta);
+  let active=0,peak=0;
+  for(const event of events){active+=event.delta;peak=Math.max(peak,active)}
+  if(p.total<peak+e.unusable)fail('Không thể giảm số lượng: đã có thiết bị đang mượn hoặc giữ chỗ. Cần ít nhất '+(peak+e.unusable)+' chiếc.');
+  e.name=name;e.category=category;e.total=p.total;e.value=p.value;
+  log(s,role,e.id,'Cập nhật thông tin thiết bị',now);
+  return s;
+ }
  if(action==='restoreEquipment'){
   need(['staff']);
   const e=s.equipment.find(e=>e.id===p.id);
