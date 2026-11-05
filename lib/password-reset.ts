@@ -20,7 +20,11 @@ export async function resetPassword(env:any,req:Request,b:any,fetcher:typeof fet
   }
   return reply({ok:true,message:'Nếu email đã được đăng ký, liên kết đặt lại mật khẩu sẽ được gửi tới địa chỉ đó. Hãy kiểm tra cả thư rác.'});
  }
- const token=String(b.token||''),password=String(b.password||'');if(!/^[a-f0-9-]{72}$/.test(token)||password.length<10||password.length>128||password!==b.confirmPassword)return reply({error:'Liên kết không hợp lệ hoặc hai mật khẩu chưa khớp (10–128 ký tự).'},400);
+ const token=typeof b.token==='string'?b.token:'';
+ const password=typeof b.password==='string'?b.password:'';
+ if(!/^[a-f0-9-]{72}$/.test(token))return reply({error:'Liên kết đặt lại mật khẩu không đầy đủ hoặc không hợp lệ. Vui lòng yêu cầu liên kết mới từ trang đăng nhập.'},400);
+ if(password.length<10||password.length>128)return reply({error:'Mật khẩu mới phải có từ 10 đến 128 ký tự.'},400);
+ if(password!==b.confirmPassword)return reply({error:'Hai mật khẩu không trùng khớp. Vui lòng kiểm tra lại từng ký tự.'},400);
  const row=await env.DB.prepare('SELECT data FROM workspaces WHERE id=?').bind('reset:'+await digest(token)).first();if(!row)return reply({error:'Liên kết không hợp lệ hoặc đã được sử dụng.'},400);const reset=JSON.parse(row.data);if(reset.expires<Date.now())return reply({error:'Liên kết đã hết hạn. Hãy yêu cầu liên kết mới.'},400);
  const arow=await env.DB.prepare('SELECT data FROM workspaces WHERE id=?').bind('account:'+reset.email).first();if(!arow)return reply({error:'Liên kết không hợp lệ.'},400);const a=JSON.parse(arow.data);if(a.hash!==reset.hash)return reply({error:'Liên kết đã được sử dụng hoặc mật khẩu đã thay đổi.'},400);
  const salt=crypto.randomUUID(),hash=await passwordHash(password,salt);const next={...a,salt,hash,passwordChangedAt:Date.now()};
