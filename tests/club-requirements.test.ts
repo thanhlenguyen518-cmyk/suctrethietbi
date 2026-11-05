@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {emptyState,mutate} from '../lib/workflow.ts';
+import {emptyState,mutate,available} from '../lib/workflow.ts';
 import {queueActivityNotices} from '../lib/activity-email.ts';
 
 const t=Date.parse('2030-03-01T00:00:00Z');
@@ -54,4 +54,16 @@ test('New requests notify only borrower and verified club staff; board approvals
  let reviewed=mutate(next,'staff','review',{id,valid:true},t);
  assert.equal(queueActivityNotices(reviewed,next,'review',id,'staff',roles,t),2);
  assert.ok(reviewed.notices.some(n=>n.to==='board@example.com'&&n.type==='activity'));
+});
+
+test('Early handover blocks inventory immediately and overdue signed-out stock remains unavailable until staff receives it',()=>{
+ let state=fixture();state.requests=[{id:'MT-EARLY',name:'Hội viên A',contact:'a@example.com',status:'ready',start:new Date(t+86400000).toISOString(),end:new Date(t+2*86400000).toISOString(),items:[{id:'TB001',qty:1}]}];
+ const windowStart=new Date(t+1000).toISOString(),windowEnd=new Date(t+3600000).toISOString();
+ assert.equal(available(state,'TB001',windowStart,windowEnd),4);
+ state=mutate(state,'staff','handover',{id:'MT-EARLY',note:'Đã kiểm tra thiết bị',checked:true},t);
+ assert.equal(available(state,'TB001',windowStart,windowEnd),3);
+ state=mutate(state,'borrower','sign',{id:'MT-EARLY',confirmed:true},t+1000);
+ assert.equal(available(state,'TB001',new Date(t+3*86400000).toISOString(),new Date(t+4*86400000).toISOString()),3);
+ state=mutate(state,'staff','return',{id:'MT-EARLY',checked:true,note:'Nguyên vẹn',damage:[]},t+3*86400000);
+ assert.equal(available(state,'TB001',new Date(t+3*86400000).toISOString(),new Date(t+4*86400000).toISOString()),4);
 });
