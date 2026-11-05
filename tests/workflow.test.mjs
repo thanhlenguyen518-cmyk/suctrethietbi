@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mutate, available} from '../lib/workflow.ts';
+import {mutate, available, displayStatus, isApprovalOverdue} from '../lib/workflow.ts';
 import {borrowedQuantity,reservedQuantity,visibleNotices} from '../lib/visibility.ts';
 
 const now=Date.parse('2026-11-05T08:00:00.000Z');
@@ -115,4 +115,24 @@ test('Ban chủ nhiệm can edit equipment but cannot lower stock below reserved
  assert.equal(updated.equipment[0].total,3);
  assert.equal(updated.logs[0].role,'board');
  assert.throws(()=>mutate(source,'board','updateEquipment',{id:'TB001',name:'Máy ảnh CLB',category:'Ghi hình',total:0,value:2000000},now),/không hợp lệ/);
+});
+
+test('Unapproved requests are marked overdue when pickup time passes',()=>{
+ for(const status of ['review','supplement','board']){
+  const s=state(status);
+  assert.equal(displayStatus(s.requests[0],Date.parse(start)-1),status);
+  assert.equal(displayStatus(s.requests[0],Date.parse(start)),'overdue');
+  assert.equal(isApprovalOverdue(s.requests[0],Date.parse(start)+1000),true);
+ }
+ assert.equal(displayStatus(state('borrowed').requests[0],Date.parse(end)+1000),'borrowed');
+ assert.equal(displayStatus(state('closed').requests[0],Date.parse(end)+1000),'closed');
+});
+test('Staff and board cannot process an unapproved overdue request',()=>{
+ const time=Date.parse(start)+1000;
+ const review=state('review'),board=state('board'),supplement=state('supplement');
+ assert.throws(()=>mutate(review,'staff','review',{id:'MT-001',valid:true},time),/Chỉ được xem/);
+ assert.throws(()=>mutate(review,'staff','review',{id:'MT-001',valid:false,note:'Bổ sung'},time),/Chỉ được xem/);
+ assert.throws(()=>mutate(board,'board','approve',{id:'MT-001',approved:true},time),/Chỉ được xem/);
+ assert.throws(()=>mutate(board,'board','approve',{id:'MT-001',approved:false,note:'Từ chối'},time),/Chỉ được xem/);
+ assert.throws(()=>mutate(supplement,'borrower','cancel',{id:'MT-001',confirmed:true},time),/Chỉ được xem/);
 });
