@@ -54,7 +54,7 @@ test('valid email reset token can change password once only',async()=>{
  sql.close();
 });
 
-test('password recovery emails use query links that survive mobile Gmail browsers',async()=>{
+test('password recovery emails use dedicated path links that survive mobile Gmail browsers',async()=>{
  const {sql,db}=setup();
  const email='member@example.test';
  const hash='existing-password-hash';
@@ -74,7 +74,8 @@ test('password recovery emails use query links that survive mobile Gmail browser
  const url=new URL(match[0]);
  assert.equal(url.hostname,'muonthietbisuctre.suctreclub.workers.dev');
  assert.equal(url.hash,'');
- const token=url.searchParams.get('reset');
+ assert.equal(url.search,'','reset links should not depend on query parameters');
+ const token=url.pathname.match(/^\/reset\/([a-f0-9-]{72})$/)?.[1]||null;
  assert.match(token||'',/^[a-f0-9-]{72}$/);
  assert.equal(text.includes('\\\\n'),false,'email must contain real line break, not escaped backslash-n');
  const row:any=sql.prepare('SELECT data FROM workspaces WHERE id=?').get('reset:'+await digest(token!));
