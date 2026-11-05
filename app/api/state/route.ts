@@ -8,7 +8,7 @@ import {requestInput,checkRequest} from '../../../lib/automation';
 import {calibrationMetrics} from '../../../lib/calibration';
 import {reportText,reminderText} from '../../../lib/ai-schema';
 import {imageInputs} from '../../../lib/evidence';
-import {mailReady} from '../../../lib/mail';
+import {mailReady,mailProvider} from '../../../lib/mail';
 import {personalLogs,attributeNewLogs} from '../../../lib/activity';
 import {queueActivityNotices,activityActions} from '../../../lib/activity-email';
 import {borrowedQuantity,reservedQuantity,visibleNotices} from '../../../lib/visibility';
@@ -35,7 +35,7 @@ function visibleState(s:any,req:Request){
  return result;
 }
 function publicState(s:any){return {...s,requests:s.requests.map((r:any)=>({...r,photos:(r.photos||[]).map(({key,...p}:any)=>p)})),settings:{...s.settings,calibration:undefined}}}
-export async function GET(req:Request){try{const {s,version}=await loadWorkspace(env,req);return json({...visibleState(s,req),version,aiReady:aiConfig(env).ready,aiConfiguration:{...aiConfig(env),fingerprint:aiFingerprint(env)},calibration:calibrationMetrics(s.settings.calibration||[],aiFingerprint(env)),mailReady:mailReady(env),schedulerEnabled:(env as any).SCHEDULER_ENABLED==='true'})}catch(e:any){return json({error:e.message==='AUTH'?'Vui lòng đăng nhập ChatGPT để sử dụng.':e.message},e.message==='AUTH'?401:503)}}
+export async function GET(req:Request){try{const {s,version}=await loadWorkspace(env,req);return json({...visibleState(s,req),version,aiReady:aiConfig(env).ready,aiConfiguration:{...aiConfig(env),fingerprint:aiFingerprint(env)},calibration:calibrationMetrics(s.settings.calibration||[],aiFingerprint(env)),mailReady:mailReady(env),mailSetup:req.headers.get('x-suctre-role')==='board'?{gmailUrl:!!(env as any).GMAIL_SCRIPT_URL,gmailSecret:!!(env as any).GMAIL_SCRIPT_SECRET,provider:mailProvider(env)}:undefined,schedulerEnabled:(env as any).SCHEDULER_ENABLED==='true'})}catch(e:any){return json({error:e.message==='AUTH'?'Vui lòng đăng nhập ChatGPT để sử dụng.':e.message},e.message==='AUTH'?401:503)}}
 export async function POST(req:Request){try{
  sameOrigin(req);if(Number(req.headers.get('content-length')||0)>200000)throw new Error('Dữ liệu quá lớn.');const b:any=await req.json();if(JSON.stringify(b).length>200000)throw new Error('Dữ liệu quá lớn.');if(!['borrower','staff','board'].includes(b.role))throw new Error('Vai trò không hợp lệ.');const assigned=req.headers.get('x-suctre-role');if(assigned&&b.role!==assigned)return json({error:'Bạn không có quyền sử dụng vai trò này.'},403);const initial=await loadWorkspace(env,req);
  return await withLock(initial.db,initial.owner,async()=>{
