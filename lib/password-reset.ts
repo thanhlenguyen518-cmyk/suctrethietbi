@@ -10,7 +10,22 @@ export async function resetPassword(env:any,req:Request,b:any,fetcher:typeof fet
   const row=await env.DB.prepare('SELECT data FROM workspaces WHERE id=?').bind('account:'+email).first();
   if(row){const account=JSON.parse(row.data),token=crypto.randomUUID()+crypto.randomUUID();const id='reset:'+await digest(token);await env.DB.prepare('INSERT INTO workspaces(id,version,data) VALUES(?,0,?)').bind(id,JSON.stringify({email,hash:account.hash,expires:Date.now()+900000})).run();
    const link=new URL('/',req.url);link.hash='reset='+token;
-   let ok=false;try{const r=await fetcher('https://api.resend.com/emails',{method:'POST',headers:{Authorization:'Bearer '+env.RESEND_API_KEY,'Content-Type':'application/json','Idempotency-Key':id},body:JSON.stringify({from:env.MAIL_FROM,to:[email],subject:'Sức Trẻ — Đặt lại mật khẩu',text:'Bạn đã yêu cầu đặt lại mật khẩu. Mở liên kết sau trong 15 phút: '+link.href+'\nNếu không phải bạn yêu cầu, hãy bỏ qua email này.'}),signal:AbortSignal.timeout(15000)});ok=r.ok&&!!(await r.json() as any).id}catch{}if(!ok){await env.DB.prepare('DELETE FROM workspaces WHERE id=?').bind(id).run();return reply({error:'Chưa gửi được email khôi phục. Vui lòng thử lại sau.'},503)}
+   let sent=false;
+   let failure='Chưa gửi được email khôi phục. Vui lòng thử lại sau.';
+   try{
+    const response=await fetcher('https://api.resend.com/emails',{
+     method:'POST',
+     headers:{Authorization:'Bearer '+env.RESEND_API_KEY,'Content-Type':'application/json','Idempotency-Key':id},
+     body:JSON.stringify({from:env.MAIL_FROM,to:[email],subject:'Sức Trẻ — Đặt lại mật khẩu',text:'Bạn đã yêu cầu đặt lại mật khẩu. Mở liên kết sau trong 15 phút: '+link.href+'\\nNếu không phải bạn yêu cầu, hãy bỏ qua email này.'}),
+     signal:AbortSignal.timeout(15000)
+    });
+    if(response.status===401||response.status===403)failure='Dịch vụ email chưa được cấp quyền gửi. Người quản lý cần kiểm tra RESEND_API_KEY và xác minh tên miền gửi trong Resend.';
+    else if(response.status===422)failure='Địa chỉ gửi email chưa được Resend chấp nhận. Người quản lý cần kiểm tra MAIL_FROM và tên miền đã xác minh.';
+    else if(response.status===429)failure='Dịch vụ email đang giới hạn số lượt gửi. Vui lòng thử lại sau.';
+    else if(!response.ok)failure='Dịch vụ email tạm thời không gửi được. Vui lòng thử lại sau.';
+    if(response.ok){const payload:any=await response.json();sent=!!payload?.id;}
+   }catch{failure='Không kết nối được dịch vụ gửi email. Vui lòng thử lại sau hoặc báo người quản lý website.';}
+   if(!sent){await env.DB.prepare('DELETE FROM workspaces WHERE id=?').bind(id).run();return reply({error:failure},503)}
   }
   return reply({ok:true,message:'Nếu email đã được đăng ký, liên kết đặt lại mật khẩu sẽ được gửi tới địa chỉ đó. Hãy kiểm tra cả thư rác.'});
  }
