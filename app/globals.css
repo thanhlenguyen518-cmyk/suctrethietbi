@@ -1312,3 +1312,6 @@ aside .nav-label{margin-top:8px}
  .equipment-detail-fields p{padding:8px}
  .equipment-view-detail{font-size:11px;min-height:38px}
 }
+
+/* Requests awaiting approval past their scheduled pickup are read-only. */
+.badge.overdue{background:#f9e2d7;color:#8c2b13;border-color:#e9b6a4;font-weight:800}
