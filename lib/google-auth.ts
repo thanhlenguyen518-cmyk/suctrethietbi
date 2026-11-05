@@ -27,11 +27,14 @@ export async function googleAuth(env:any,req:Request,fetcher:typeof fetch=fetch)
  const profile:any=await info.json(),email=String(profile.email||'').toLowerCase();
  if(profile.email_verified!==true||!profile.sub||!/^\S+@\S+\.\S+$/.test(email)||email.length>160)return fail('Google chưa xác minh email.');
  const existing=await env.DB.prepare('SELECT data FROM workspaces WHERE id=?').bind('account:'+email).first();
- if(existing){const account=JSON.parse(existing.data);if(account.googleSub!==profile.sub)return fail('Email này đã có tài khoản. Hãy đăng nhập bằng mật khẩu; chưa hỗ trợ tự liên kết tài khoản Google.',409)}
- const generation=existing?JSON.parse(existing.data).salt:crypto.randomUUID();
+ const existingAccount=existing?JSON.parse(existing.data):null;
+ // A Google-verified email can be linked to an existing account without changing
+ // its role, password, or security generation. A different Google subject is rejected.
+ if(existingAccount?.googleSub&&existingAccount.googleSub!==profile.sub)return fail('Email đã liên kết với tài khoản Google khác.',409);
+ const generation=existingAccount?.salt||crypto.randomUUID();
  const session=crypto.randomUUID()+crypto.randomUUID(),writes=[];
  if(!existing)writes.push(env.DB.prepare('INSERT INTO workspaces(id,version,data) VALUES(?,0,?)').bind('account:'+email,JSON.stringify({email,name:String(profile.name||email).slice(0,120),role:'borrower',googleSub:profile.sub,salt:generation,hash:'google-only',emailVerified:true})));
- else {const account=JSON.parse(existing.data);if(account.emailVerified!==true)writes.push(env.DB.prepare('UPDATE workspaces SET data=?,version=version+1 WHERE id=? AND data=?').bind(JSON.stringify({...account,emailVerified:true}),'account:'+email,existing.data));}
+ else if(existingAccount.googleSub!==profile.sub||existingAccount.emailVerified!==true)writes.push(env.DB.prepare('UPDATE workspaces SET data=?,version=version+1 WHERE id=? AND data=?').bind(JSON.stringify({...existingAccount,googleSub:profile.sub,emailVerified:true}),'account:'+email,existing.data));
  writes.push(env.DB.prepare('INSERT INTO workspaces(id,version,data) VALUES(?,0,?)').bind('session:'+await digest(session),JSON.stringify({email,generation,issuedAt:Date.now(),expires:Date.now()+86400000})));
  await env.DB.batch(writes);
  const headers=new Headers({'Location':'/','Cache-Control':'no-store','Referrer-Policy':'no-referrer'});headers.append('Set-Cookie',cookie('',0));headers.append('Set-Cookie',`suctre_session=${session}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=86400`);
