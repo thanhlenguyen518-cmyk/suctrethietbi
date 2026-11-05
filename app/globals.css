@@ -1397,3 +1397,27 @@ aside .nav-label{margin-top:8px}
   object-fit:contain!important;
  }
 }
+
+/* Borderless generated illustration. No white frame, padding or extra shadow. */
+.story-cover.story-cover-full-image{
+ border:0!important;
+ box-shadow:none!important;
+ outline:0!important;
+ background:transparent!important;
+ padding:0!important;
+ border-radius:0!important;
+ overflow:visible!important;
+ width:50%!important;
+}
+.story-cover.story-cover-full-image>img{
+ display:block!important;
+ width:100%!important;
+ height:auto!important;
+ object-fit:contain!important;
+ border:0!important;
+ border-radius:0!important;
+ box-shadow:none!important;
+}
+@media(max-width:760px){
+ .story-cover.story-cover-full-image{width:100%!important}
+}
