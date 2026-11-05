@@ -983,3 +983,36 @@ aside .nav-label{margin-top:17px}
  }
  aside .nav-label{margin-top:0}
 }
+
+
+/* Logo sizing refinement: compact, balanced, no layout stretch. */
+aside .brand.brand-image{
+  height:112px;
+  min-height:112px;
+}
+aside .brand-image img{
+  width:148px;
+  max-height:105px;
+}
+aside .nav-label{margin-top:8px}
+.login-logo{
+  width:152px;
+  min-height:116px;
+  margin-bottom:12px;
+}
+.login-logo img{
+  width:138px;
+  max-height:103px;
+}
+@media(max-width:760px){
+  aside .brand.brand-image{
+    width:105px;
+    height:72px;
+    min-height:72px;
+  }
+  aside .brand-image img{
+    width:94px;
+    max-height:68px;
+  }
+  aside .nav-label{margin-top:0}
+}
