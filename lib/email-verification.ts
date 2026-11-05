@@ -1,3 +1,4 @@
+import {mailReady,sendTransactionalEmail} from './mail.ts';
 const digest=async(s:string)=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)))).map(x=>x.toString(16).padStart(2,'0')).join('');
 
 const emailPattern=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -6,7 +7,7 @@ const cooldown=async(email:string)=>'email-limit:'+await digest(email);
 export async function sendVerificationCode(env:any,email:string,fetcher:typeof fetch=fetch){
  email=email.trim().toLowerCase();
  if(!emailPattern.test(email)||email.length>160)throw new Error('Địa chỉ email không hợp lệ.');
- if(!env.RESEND_API_KEY||!env.MAIL_FROM)throw new Error('Chưa cấu hình dịch vụ email xác minh. Vui lòng liên hệ quản trị viên.');
+ if(!mailReady(env))throw new Error('Chưa cấu hình dịch vụ email xác minh. Vui lòng liên hệ quản trị viên.');
  const now=Date.now(),limitId=await cooldown(email);
  // Enforce a per-address cooldown, including across concurrent requests.
  const allowed=await env.DB.prepare("INSERT INTO workspaces(id,version,data) VALUES(?,0,?) ON CONFLICT(id) DO UPDATE SET data=excluded.data WHERE CAST(json_extract(workspaces.data,'$.at') AS INTEGER) < ? RETURNING id").bind(limitId,JSON.stringify({at:now}),now-60000).first();
@@ -18,8 +19,7 @@ export async function sendVerificationCode(env:any,email:string,fetcher:typeof f
  const record={hash:await digest(nonce+':'+code),nonce,expires:now+10*60000,tries:0};
  await env.DB.prepare('INSERT INTO workspaces(id,version,data) VALUES(?,0,?) ON CONFLICT(id) DO UPDATE SET data=excluded.data,version=version+1').bind(id,JSON.stringify(record)).run();
  try{
-  const response=await fetcher('https://api.resend.com/emails',{method:'POST',headers:{Authorization:'Bearer '+env.RESEND_API_KEY,'Content-Type':'application/json'},body:JSON.stringify({from:env.MAIL_FROM,to:[email],subject:'Sức Trẻ — Mã xác minh email',text:'Mã xác minh của bạn là: '+code+'\nMã có hiệu lực 10 phút. Nếu không yêu cầu, hãy bỏ qua email này.'}),signal:AbortSignal.timeout(15000)});
-  if(!response.ok||((await response.json()) as any).id==null)throw new Error('mail failed');
+  await sendTransactionalEmail(env,email,'Sức Trẻ — Mã xác minh email','Mã xác minh của bạn là: '+code+'\nMã có hiệu lực 10 phút. Nếu không yêu cầu, hãy bỏ qua email này.','verify-'+id,fetcher);
  }catch{
   await env.DB.prepare('DELETE FROM workspaces WHERE id=?').bind(id).run();
   throw new Error('Chưa gửi được mã xác minh. Hãy kiểm tra cấu hình email.');
