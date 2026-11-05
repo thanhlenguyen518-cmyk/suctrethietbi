@@ -1452,3 +1452,41 @@ aside .nav-label{margin-top:8px}
 @media(max-width:480px){
  .google-signin-button{min-height:50px;font-size:15px}
 }
+
+/* Panoramic hero: fills the entire dashboard row, stays slim, never crops. */
+.story-cover.story-cover-full-image{
+ display:block!important;
+ width:100%!important;
+ max-width:100%!important;
+ margin:0!important;
+ padding:0!important;
+ height:auto!important;
+ min-height:0!important;
+ max-height:none!important;
+ aspect-ratio:auto!important;
+ background:transparent!important;
+ border:0!important;
+ border-radius:0!important;
+ box-shadow:none!important;
+ outline:0!important;
+ overflow:visible!important;
+}
+.story-cover.story-cover-full-image>img{
+ display:block!important;
+ width:100%!important;
+ max-width:100%!important;
+ height:auto!important;
+ min-height:0!important;
+ max-height:none!important;
+ aspect-ratio:auto!important;
+ object-fit:contain!important;
+ object-position:center!important;
+ margin:0!important;
+ padding:0!important;
+ border:0!important;
+ border-radius:0!important;
+ box-shadow:none!important;
+}
+@media(max-width:760px){
+ .story-cover.story-cover-full-image{width:100%!important}
+}
