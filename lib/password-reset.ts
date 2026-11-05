@@ -10,9 +10,9 @@ export async function resetPassword(env:any,req:Request,b:any,fetcher:typeof fet
   if(!result)return reply({error:'Vui lòng chờ một phút trước khi yêu cầu lại.'},429);
   const row=await env.DB.prepare('SELECT data FROM workspaces WHERE id=?').bind('account:'+email).first();
   if(row){const account=JSON.parse(row.data),token=crypto.randomUUID()+crypto.randomUUID();const id='reset:'+await digest(token);await env.DB.prepare('INSERT INTO workspaces(id,version,data) VALUES(?,0,?)').bind(id,JSON.stringify({email,hash:account.hash,expires:Date.now()+900000})).run();
-   const link=new URL('/',req.url);link.hash='reset='+token;
+   const link=new URL('/',req.url);link.searchParams.set('reset',token);
    try{
-    await sendTransactionalEmail(env,email,'Sức Trẻ — Đặt lại mật khẩu','Bạn đã yêu cầu đặt lại mật khẩu. Mở liên kết sau trong 15 phút: '+link.href+'\\nNếu không phải bạn yêu cầu, hãy bỏ qua email này.',id,fetcher);
+    await sendTransactionalEmail(env,email,'Sức Trẻ — Đặt lại mật khẩu','Bạn đã yêu cầu đặt lại mật khẩu. Mở liên kết sau trong 15 phút: '+link.href+'\nNếu không phải bạn yêu cầu, hãy bỏ qua email này.',id,fetcher);
    }catch(e:any){
     await env.DB.prepare('DELETE FROM workspaces WHERE id=?').bind(id).run();
     return reply({error:e.message||'Chưa gửi được email khôi phục. Vui lòng thử lại sau.'},503);
