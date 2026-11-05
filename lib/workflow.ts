@@ -13,7 +13,15 @@ const fail=(s:string):never=>{throw new Error(s)};
 const text=(x:any,max=3000)=>typeof x==='string'?x.trim().slice(0,max):'';
 export function available(s:State,eid:string,start:string,end:string,exclude=''){
  const e=s.equipment.find(e=>e.id===eid);if(!e)return 0;
- const reserved=s.requests.filter(r=>r.id!==exclude&&['ready','handover','borrowed'].includes(r.status)&&(r.start<end&&r.end>start || r.status==='borrowed'&&r.end<new Date().toISOString())).reduce((n,r)=>n+r.items.filter((i:any)=>i.id===eid).reduce((a:number,i:any)=>a+i.qty,0),0);
+ const reserved=s.requests.filter(r=>{
+  if(r.id===exclude||!['ready','handover','borrowed'].includes(r.status))return false;
+  const intended=Date.parse(r.start),actual=Number(r.handoverAt||r.signedAt||0);
+  const effectiveStart=actual>0?Math.min(intended,actual):intended;
+  const physicallyOut=r.status==='borrowed'||r.status==='handover'&&actual>0;
+  // After actual handover, inventory remains unavailable until staff records return,
+  // even if the planned borrowing window has ended.
+  return effectiveStart<Date.parse(end)&&(physicallyOut||Date.parse(r.end)>Date.parse(start));
+ }).reduce((n,r)=>n+r.items.filter((i:any)=>i.id===eid).reduce((a:number,i:any)=>a+i.qty,0),0);
  return Math.max(0,e.total-e.unusable-reserved);
 }
 export function validate(s:State,p:any,now=Date.now()){
@@ -100,7 +108,7 @@ export function mutate(input:State,role:Role,action:string,p:any,now=Date.now())
  }
  if(action==='review'){need(['staff'],['review']);if(Date.parse(r.end)<=now)fail('Lịch mượn đã kết thúc. Người mượn cần tạo đơn với thời gian mới.');if(p.valid===false){if(!text(p.note))fail('Nhập thông tin cần bổ sung.');r.status='supplement';r.note=text(p.note);r.supplementUntil=now+86400000;notice(s,r,r.note+' — vui lòng bổ sung trong 24 giờ.',now)}else{r.reviewNote='Đã kiểm tra và xác nhận thông tin hợp lệ.';route(s,r,now)}}
  else if(action==='approve'){need(['board'],['board']);if(Date.parse(r.end)<=now)fail('Lịch mượn đã kết thúc. Không thể duyệt đơn quá hạn.');if(typeof p.approved!=='boolean')fail('Chọn đồng ý hoặc từ chối đơn.');if(p.approved===false&&!text(p.note))fail('Nhập lý do từ chối đơn.');r.boardNote=text(p.note)||'Ban chủ nhiệm đồng ý cho mượn sau khi xem xét hồ sơ.';if(p.approved===true)reserve(s,r,now);else{r.status='rejected';notice(s,r,'Đơn bị từ chối: '+r.boardNote,now)}}
- else if(action==='handover'){need(['staff'],['ready']);if(!text(p.note)||p.checked!==true)fail('Xác nhận kiểm tra thiết bị và ghi tình trạng, phụ kiện trước giao.');r.handoverNote=text(p.note);r.status='handover'}
+ else if(action==='handover'){need(['staff'],['ready']);if(!text(p.note)||p.checked!==true)fail('Xác nhận kiểm tra thiết bị và ghi tình trạng, phụ kiện trước giao.');r.handoverNote=text(p.note);r.handoverAt=now;r.status='handover'}
  else if(action==='sign'){need(['borrower'],['handover']);if(p.confirmed!==true)fail('Cần xác nhận đã nhận đúng thiết bị và phụ kiện.');r.signature=r.name;r.signedAt=now;r.status='borrowed'}
  else if(action==='requestEarlyReturn'){
   need(['borrower'],['borrowed']);
