@@ -10,6 +10,7 @@ import {reportText,reminderText} from '../../../lib/ai-schema';
 import {imageInputs} from '../../../lib/evidence';
 import {mailReady} from '../../../lib/mail';
 import {personalLogs,attributeNewLogs} from '../../../lib/activity';
+import {queueActivityNotices,activityActions} from '../../../lib/activity-email';
 import {borrowedQuantity,reservedQuantity,visibleNotices} from '../../../lib/visibility';
 function visibleState(s:any,req:Request){
  const result=publicState(s);
@@ -58,6 +59,15 @@ export async function POST(req:Request){try{
  }else{
   next=mutate(s,b.role,b.action,p);if(b.action==='create'&&account)next.requests[0].accountEmail=account;
   if(['create','resubmit'].includes(b.action)&&next.settings.autoCheck){const r=b.action==='create'?next.requests[0]:next.requests.find((r:any)=>r.id===p.id);try{next=await checkRequest(next,r,env)}catch(e:any){r.lastAIError=String(e.message).slice(0,500);next.logs.unshift({id:crypto.randomUUID(),requestId:r.id,role:'system',action:'AI chưa xử lý được; đơn đã lưu và chuyển kiểm tra thủ công',at:new Date().toISOString()})}}
+ }
+ if(activityActions.has(b.action)){
+  const requestId=b.action==='create'?String(next.requests[0]?.id||''):String(p.id||p.code||'');
+  const accounts=await db.prepare("SELECT data FROM workspaces WHERE id LIKE 'account:%' LIMIT 250").all();
+  const roleEmails:Record<string,string[]>={staff:[],board:[]};
+  for(const row of accounts.results||[]){
+   try{const user=JSON.parse(row.data);if(user.emailVerified===true&&['staff','board'].includes(user.role)&&typeof user.email==='string')roleEmails[user.role].push(user.email)}catch{}
+  }
+  queueActivityNotices(next,s,b.action,requestId,b.role,roleEmails);
  }
  attributeNewLogs(previousLogs,next.logs,account,owner);
  await saveWorkspace(db,owner,version,next);return json({ok:true});
