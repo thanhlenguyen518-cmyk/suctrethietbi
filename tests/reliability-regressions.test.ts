@@ -27,10 +27,10 @@ test('staff cannot review or board approve a request after its borrowing period 
  const order={name:'Member',contact:'member@example.test',purpose:'Sinh hoạt CLB',start:new Date(now+3600000).toISOString(),end:new Date(now+7200000).toISOString(),items:[{id:'TB001',qty:1}]};
  s=mutate(s,'borrower','create',order,now);
  const id=s.requests[0].id;
- assert.throws(()=>mutate(s,'staff','review',{id,valid:true},now+7200001),/đã kết thúc/);
+ assert.throws(()=>mutate(s,'staff','review',{id,valid:true},now+7200001),/Chỉ được xem/);
  s=mutate(s,'staff','review',{id,valid:true},now);
  assert.equal(s.requests[0].status,'board');
- assert.throws(()=>mutate(s,'board','approve',{id,approved:true},now+7200001),/đã kết thúc/);
+ assert.throws(()=>mutate(s,'board','approve',{id,approved:true},now+7200001),/Chỉ được xem/);
 });
 
 test('password reset reports sender permission errors without leaking provider response',async()=>{
