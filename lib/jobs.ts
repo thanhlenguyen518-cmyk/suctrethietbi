@@ -2,8 +2,9 @@ import {loadOwner,saveWorkspace} from './storage.ts';
 import {withLock} from './locking.ts';
 import {prepareTimers,isOverdue} from './automation.ts';
 import {mailReady,sendEmail} from './mail.ts';
+export const MAINTENANCE_WORKSPACES_SQL="SELECT id FROM workspaces WHERE json_valid(data)=1 AND json_type(data,'$.requests')='array' AND json_type(data,'$.equipment')='array' ORDER BY id";
 export async function runMaintenance(env:any){
- if(!env.DB)throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');const rows=await env.DB.prepare("SELECT id FROM workspaces WHERE json_valid(data)=1 AND json_type(data,'$.requests')='array' AND json_type(data,'$.equipment')='array' ORDER BY id").all();let processed=0,sent=0;const failures:string[]=[];
+ if(!env.DB)throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');const rows=await env.DB.prepare(MAINTENANCE_WORKSPACES_SQL).all();let processed=0,sent=0;const failures:string[]=[];
  for(const {id:owner} of rows.results){try{await withLock(env.DB,owner,async()=>{
   const {s,version}=await loadOwner(env,owner);const next=await prepareTimers(s,env);await saveWorkspace(env.DB,owner,version,next);
   for(const n of next.notices.filter((n:any)=>n.type==='overdue'&&n.emailStatus==='queued'))await env.DB.prepare('INSERT OR IGNORE INTO mail_outbox(id,owner,request_id,payload,status,created) VALUES(?,?,?,?,?,?)').bind(n.id,owner,n.requestId,JSON.stringify(n),'pending',Date.parse(n.at)).run();
