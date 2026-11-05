@@ -1361,7 +1361,9 @@ aside .nav-label{margin-top:8px}
 /* Full banner, at natural aspect ratio: no clipping or zoom on any viewport. */
 .story-cover.story-cover-full-image{
  display:block!important;
- width:100%;
+ width:50%;
+ margin-inline:auto;
+
  height:auto!important;
  min-height:0!important;
  max-height:none!important;
@@ -1385,6 +1387,7 @@ aside .nav-label{margin-top:8px}
 @media(max-width:760px){
  .story-cover.story-cover-full-image{
   display:block!important;
+  width:100%;
   height:auto!important;
   aspect-ratio:auto!important;
  }
