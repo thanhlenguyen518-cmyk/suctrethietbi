@@ -30,8 +30,8 @@ export default function PasswordReset({token,onBack}:{token:string;onBack:()=>vo
   }catch(e:any){setError(e.message||'Có lỗi xảy ra. Vui lòng thử lại.');}
   finally{setBusy(false);}
  }
- return <main style={{minHeight:'100vh',display:'grid',placeItems:'center',padding:24}}>
-  <section className="panel" style={{maxWidth:440,width:'100%',padding:32}}>
+ return <main style={{minHeight:'100vh',display:'grid',placeItems:'center',padding:16,width:'100%',boxSizing:'border-box'}}>
+  <section className="panel" style={{maxWidth:440,width:'100%',padding:'clamp(18px,5vw,32px)',minWidth:0,boxSizing:'border-box'}}>
    <h1>{isReset?'Đặt lại mật khẩu':'Quên mật khẩu'}</h1>
    <form style={{display:'grid',gap:16}} onSubmit={submit}>
     {isReset?<>
@@ -44,9 +44,10 @@ export default function PasswordReset({token,onBack}:{token:string;onBack:()=>vo
       <input required type={visible?'text':'password'} minLength={10} maxLength={128} autoComplete="new-password"
        value={confirmPassword} onChange={e=>{setConfirm(e.target.value);setError('')}}/>
      </label>
-     <label style={{display:'flex',alignItems:'center',gap:8,fontWeight:500}}>
-      <input type="checkbox" checked={visible} onChange={e=>setVisible(e.target.checked)}/> Hiện mật khẩu
-     </label>
+     <button type="button" className="secondary" onClick={()=>setVisible(v=>!v)}
+      aria-pressed={visible} style={{width:'100%',minHeight:44,display:'block'}}>
+      {visible?'Ẩn mật khẩu':'Hiện mật khẩu'}
+     </button>
      {mismatch&&<p role="alert" style={{color:'#9b2d12',margin:0}}>Hai mật khẩu chưa trùng khớp.</p>}
      {password.length>0&&!passwordLengthOk&&<p style={{color:'#7b5116',margin:0}}>Cần từ 10 đến 128 ký tự.</p>}
     </>:<label>Email đã đăng ký
