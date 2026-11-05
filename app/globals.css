@@ -928,3 +928,58 @@ aside .logo:after{display:none}
  .story-cover p{font-size:12px}
 }
 
+
+
+/* Official mascot: keep logo proportions intact on navigation and sign-in. */
+aside .brand.brand-image{
+ width:100%;
+ min-height:142px;
+ height:142px;
+ padding:0 2px;
+ display:flex;
+ justify-content:center;
+ align-items:center;
+ border:0;
+ overflow:visible;
+}
+aside .brand-image img{
+ display:block;
+ width:185px;
+ max-width:100%;
+ height:auto;
+ max-height:138px;
+ object-fit:contain;
+ filter:none;
+}
+aside .nav-label{margin-top:17px}
+.login-logo{
+ width:184px;
+ min-height:137px;
+ margin:0 auto 15px;
+ display:grid;
+ place-items:center;
+ background:#1b3036;
+ border:1px solid #304c4e;
+ border-radius:17px;
+ padding:6px;
+}
+.login-logo img{
+ display:block;
+ width:170px;
+ height:auto;
+ max-height:128px;
+ object-fit:contain;
+}
+@media(max-width:760px){
+ aside .brand.brand-image{
+  width:126px;
+  min-height:85px;
+  height:85px;
+  padding:0;
+ }
+ aside .brand-image img{
+  width:115px;
+  max-height:85px;
+ }
+ aside .nav-label{margin-top:0}
+}
