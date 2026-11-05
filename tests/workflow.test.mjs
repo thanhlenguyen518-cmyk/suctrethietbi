@@ -86,3 +86,24 @@ test('Distinct borrowers can create requests without reusing the same submission
  assert.equal(second.requests.length,2);
  assert.notEqual(second.requests[0].submissionId,second.requests[1].submissionId);
 });
+
+test('Staff can update equipment name, category, quantity and reference value',()=>{
+ const source=state();
+ const next=mutate(source,'staff','updateEquipment',{id:'TB001',name:'Máy ảnh sự kiện',category:'Ghi hình',total:4,value:2500000},now);
+ assert.equal(next.equipment[0].name,'Máy ảnh sự kiện');
+ assert.equal(next.equipment[0].category,'Ghi hình');
+ assert.equal(next.equipment[0].total,4);
+ assert.equal(next.equipment[0].value,2500000);
+ assert.equal(source.equipment[0].name,'Máy ảnh');
+ assert.equal(next.logs[0].action,'Cập nhật thông tin thiết bị');
+});
+test('Borrower cannot modify the inventory',()=>{
+ assert.throws(()=>mutate(state(),'borrower','updateEquipment',{id:'TB001',name:'Không được',category:'Khác',total:5,value:0},now),/Vai trò/);
+});
+test('Cannot reduce stock below active reservations and damaged devices',()=>{
+ const source=state('ready');
+ source.equipment[0].unusable=1;
+ assert.throws(()=>mutate(source,'staff','updateEquipment',{id:'TB001',name:'Máy ảnh',category:'Ghi hình',total:1,value:1},now),/Không thể giảm số lượng/);
+ const next=mutate(source,'staff','updateEquipment',{id:'TB001',name:'Máy ảnh',category:'Ghi hình',total:2,value:1},now);
+ assert.equal(next.equipment[0].total,2);
+});
